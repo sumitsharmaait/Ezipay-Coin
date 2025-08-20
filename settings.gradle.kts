@@ -12,6 +12,7 @@ pluginManagement {
     }
 }
 
+
 rootProject.name = "Ezipay Coin"
 include(":app")
  
