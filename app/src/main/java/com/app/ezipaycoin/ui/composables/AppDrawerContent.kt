@@ -1,5 +1,7 @@
 package com.app.ezipaycoin.ui.composables
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -50,34 +52,49 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.app.ezipaycoin.R
+import com.app.ezipaycoin.presentation.shared.SharedEvent
+import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.ui.theme.Gradient_1
 import com.app.ezipaycoin.ui.theme.Gradient_2
 import com.app.ezipaycoin.ui.theme.Gradient_3
 import com.app.ezipaycoin.ui.theme.Gradient_4
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
 import com.app.ezipaycoin.ui.theme.greyButtonBackground
+import kotlinx.coroutines.flow.filterIsInstance
 
 
 data class SocialItem(val name: String, val icon: ImageVector)
 
 @Composable
 fun AppDrawerContent(
+    sharedViewModel: WalletSharedViewModel,
     selectedItem: String,
     onItemSelected: (String) -> Unit,
     onSignOut: () -> Unit,
     navItems: List<BottomNavItem>
 ) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        sharedViewModel.eventFlow
+            .filterIsInstance<SharedEvent.OpenUrl>()
+            .collect { event ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(event.url))
+                context.startActivity(intent)
+            }
+    }
 
     // IMPORTANT: Replace these with your custom social media icons
     val socialItems = listOf(
@@ -187,19 +204,51 @@ fun AppDrawerContent(
                 "Whitepaper & Tokenomics",
                 Icons.AutoMirrored.Filled.LibraryBooks,
                 selectedItem
-            ) { label -> onItemSelected(label) }
-            DrawerListItem("FAQ & Help Center", Icons.AutoMirrored.Filled.HelpOutline, selectedItem) { label -> onItemSelected(label) }
+            ) { label -> sharedViewModel.onOpenLinkClicked(label) }
+            DrawerListItem(
+                "FAQ & Help Center",
+                Icons.AutoMirrored.Filled.HelpOutline,
+                selectedItem
+            ) { label -> sharedViewModel.onOpenLinkClicked(label) }
 
             SectionHeader("Settings")
-            DrawerListItem("Language", Icons.Filled.Translate, selectedItem) { label -> onItemSelected(label) }
-            DrawerListItem("Currency", Icons.Filled.AttachMoney, selectedItem) { label -> onItemSelected(label) }
-            DrawerListItem("Notifications", Icons.Filled.Notifications, selectedItem) { label -> onItemSelected(label) }
-            DrawerListItem("2FA & Biometrics", Icons.Filled.Fingerprint, selectedItem) { label -> onItemSelected(label) }
-            DrawerListItem("KYC Status", Icons.Filled.CheckCircle, selectedItem) { label -> onItemSelected(label) }
+            DrawerListItem(
+                "Language",
+                Icons.Filled.Translate,
+                selectedItem
+            ) { label -> onItemSelected(label) }
+            DrawerListItem(
+                "Currency",
+                Icons.Filled.AttachMoney,
+                selectedItem
+            ) { label -> onItemSelected(label) }
+            DrawerListItem(
+                "Notifications",
+                Icons.Filled.Notifications,
+                selectedItem
+            ) { label -> onItemSelected(label) }
+            DrawerListItem(
+                "2FA & Biometrics",
+                Icons.Filled.Fingerprint,
+                selectedItem
+            ) { label -> onItemSelected(label) }
+            DrawerListItem(
+                "KYC Status",
+                Icons.Filled.CheckCircle,
+                selectedItem
+            ) { label -> onItemSelected(label) }
 
             SectionHeader("Legal")
-            DrawerListItem("Terms & Conditions", Icons.Filled.Description, selectedItem) { label -> onItemSelected(label) }
-            DrawerListItem("Privacy Policy", Icons.Filled.Shield, selectedItem) { label -> onItemSelected(label) }
+            DrawerListItem(
+                "Terms & Conditions",
+                Icons.Filled.Description,
+                selectedItem
+            ) { label -> sharedViewModel.onOpenLinkClicked(label) }
+            DrawerListItem(
+                "Privacy Policy",
+                Icons.Filled.Shield,
+                selectedItem
+            ) { label -> onItemSelected(label) }
 
             SectionHeader("Social")
             LazyVerticalGrid(
@@ -209,7 +258,7 @@ fun AppDrawerContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(socialItems) { social ->
-                    IconButton(onClick = { /*TODO: Open social link*/ }) {
+                    IconButton(onClick = { sharedViewModel.onOpenLinkClicked(social.name) }) {
                         Icon(
                             social.icon,
                             contentDescription = social.name,
@@ -221,7 +270,11 @@ fun AppDrawerContent(
             }
 
             SectionHeader("Team")
-            DrawerListItem("Core Team", Icons.Filled.Groups, selectedItem) { label -> onItemSelected(label) }
+            DrawerListItem(
+                "Core Team",
+                Icons.Filled.Groups,
+                selectedItem
+            ) { label -> onItemSelected(label) }
 
             Spacer(modifier = Modifier.weight(1f)) // Push Sign Out to bottom
 

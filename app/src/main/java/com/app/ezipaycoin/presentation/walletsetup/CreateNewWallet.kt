@@ -49,7 +49,7 @@ fun CreateNewWallet(
         containerColor = AppBackgroundColor,
         topBar = {
             TopAppBarWithProgressIndicator(currentStep = 2, totalSteps = 3) {
-                /* TODO: Handle on back click */
+                navController.popBackStack()
             }
         },
         bottomBar = {

@@ -57,8 +57,9 @@ import com.app.ezipaycoin.ui.theme.Gradient_1
 import com.app.ezipaycoin.ui.theme.Gradient_2
 import com.app.ezipaycoin.ui.theme.Gradient_3
 import com.app.ezipaycoin.ui.theme.Gradient_4
-import com.app.ezipaycoin.ui.theme.RedTextColor
 import com.app.ezipaycoin.ui.theme.greyButtonBackground
+import com.app.ezipaycoin.ui.theme.receivedAmountTextColor
+import com.app.ezipaycoin.ui.theme.sendAmountTextColor
 
 @Composable
 fun WalletScreen(
@@ -301,7 +302,7 @@ private fun TokenRow(
             Text(
                 text = if (marketSnapshot[index].changePct > 0) "+ " + marketSnapshot[index].changePct + "%" else
                     marketSnapshot[index].changePct.toString() + "%",
-                style = MaterialTheme.typography.labelSmall.copy(color = RedTextColor)
+                style = MaterialTheme.typography.labelSmall.copy(color = if (marketSnapshot[index].changePct > 0) receivedAmountTextColor else sendAmountTextColor)
             )
         }
 

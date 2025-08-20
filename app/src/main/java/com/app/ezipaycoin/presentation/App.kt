@@ -23,8 +23,7 @@ import wallet.core.jni.HDWallet
 class App : Application() {
 
 
-    lateinit var clipboardManager: ClipboardManager
-        private set
+    private lateinit var clipboardManager: ClipboardManager
 
     companion object {
         private lateinit var instance: App

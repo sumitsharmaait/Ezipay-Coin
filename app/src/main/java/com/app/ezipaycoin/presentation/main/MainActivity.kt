@@ -3,13 +3,17 @@ package com.app.ezipaycoin.presentation.main
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
@@ -23,6 +27,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -31,6 +38,7 @@ import androidx.navigation.compose.rememberNavController
 import com.app.ezipaycoin.data.remote.api.ApiClient
 import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.repository.HomeRepoImpl
+import com.app.ezipaycoin.data.repository.UserDataRepoImpl
 import com.app.ezipaycoin.navigation.Navigation
 import com.app.ezipaycoin.navigation.Screen
 import com.app.ezipaycoin.presentation.App
@@ -48,22 +56,19 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
     private lateinit var navController: NavHostController
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
-       // val splashScreen = installSplashScreen()
-       // splashScreen.setKeepOnScreenCondition { viewModel.isLoading.value }
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val apiService = ApiClient.retrofit.create(ApiService::class.java)
         val walletSharedViewModel = ViewModelProvider(
             this,
             ViewModelFactory {
                 val repository = HomeRepoImpl(apiService)
-                WalletSharedViewModel(repository)
+                val dataRepo = UserDataRepoImpl(App.getInstance().dataStore)
+                WalletSharedViewModel(repository, dataRepo)
             }
         )[WalletSharedViewModel::class.java]
-
 
         val bottomNavItems = App.getInstance().items
         val navigationDrawerItems = bottomNavItems + App.getInstance().navigationItems
@@ -71,6 +76,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             EzipayCoinTheme {
                 val state by viewModel.uiState.collectAsState()
+
+                val sharedState by walletSharedViewModel.uiState.collectAsState()
 
                 navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -104,12 +111,18 @@ class MainActivity : ComponentActivity() {
                     ModalNavigationDrawer(
                         drawerState = drawerState,
                         drawerContent = {
-                            if (state.isLoggedIn) {
+                            if (sharedState.isRegistered) {
                                 AppDrawerContent(
+                                    walletSharedViewModel,
                                     selectedItem = selectedItem,
                                     onItemSelected = {
                                         selectedItem = it
                                         scope.launch { drawerState.close() }
+//                                        if (it.equals("Terms & Conditions", true)){
+//                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.ezipaycoin.com/terms"))
+//                                            startActivity(intent)
+//                                           // return@AppDrawerContent
+//                                        }
                                         val route: Any = when (it) {
                                             "Home" -> Screen.BottomNavScreens.Home
                                             "Wallet" -> Screen.BottomNavScreens.Wallet
@@ -141,6 +154,7 @@ class MainActivity : ComponentActivity() {
                         }
                     ) {
                         Scaffold(
+                            modifier = Modifier.systemBarsPadding(),
                             containerColor = AppBackgroundColor,
                             contentWindowInsets = WindowInsets.safeDrawing,
                             topBar = {
@@ -190,11 +204,26 @@ class MainActivity : ComponentActivity() {
                         ) { paddingValues ->
                             Box(
                                 modifier = Modifier
-                                    .padding(paddingValues)
+                                    .background(color = AppBackgroundColor)
+                                    .padding(
+                                        PaddingValues(
+                                            start = paddingValues.calculateStartPadding(
+                                                LayoutDirection.Ltr
+                                            ),
+                                            top = paddingValues.calculateTopPadding(),
+                                            end = paddingValues.calculateEndPadding(LayoutDirection.Ltr),
+                                            bottom = if (paddingValues.calculateBottomPadding() > 40.dp) paddingValues.calculateBottomPadding() - 30.dp else paddingValues.calculateBottomPadding() // 👈 reduce or remove bottom padding
+                                        )
+                                    )
                             ) {
                                 // Root NavHost
 
-                                Navigation(state.isLoggedIn, navHostController = navController, apiService, walletSharedViewModel)
+                                Navigation(
+                                    state.isLoggedIn,
+                                    navHostController = navController,
+                                    apiService,
+                                    walletSharedViewModel
+                                )
 
                             }
                         }

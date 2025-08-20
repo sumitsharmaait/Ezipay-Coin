@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -18,8 +19,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.app.ezipaycoin.R
+import com.app.ezipaycoin.presentation.App
+import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
 import com.app.ezipaycoin.ui.theme.GoldAccentColor
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
 import com.app.ezipaycoin.ui.theme.greyButtonBackground
@@ -30,10 +34,15 @@ fun BottomNavigationBar(
     onItemSelected: (String) -> Unit,
     bottomItems: List<BottomNavItem>
 ) {
-    Box(contentAlignment = Alignment.BottomCenter) {
+    Box(
+        modifier = Modifier
+            .systemBarsPadding(),
+        contentAlignment = Alignment.BottomCenter
+    ) {
         NavigationBar(
             containerColor = greyButtonBackground,
-            modifier = Modifier.height(70.dp)
+            modifier = Modifier
+                .height(70.dp)
         ) {
             bottomItems.forEachIndexed { index, item ->
                 if (index == 2) {
@@ -94,4 +103,12 @@ fun BottomNavigationBar(
 
     }
 
+}
+
+@Preview
+@Composable
+fun PreviewBottom(){
+    EzipayCoinTheme {
+        BottomNavigationBar(selectedItem = "Home", onItemSelected = {}, bottomItems = App.getInstance().items)
+    }
 }

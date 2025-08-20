@@ -56,7 +56,7 @@ fun NavGraphBuilder.bottomNavGraph(
 
 
         composable<Screen.BottomNavScreens.Learn> {
-            LearnScreen(navController = navController, viewModel = viewModel<LearnViewModel>())
+            LearnScreen(navController = navController, viewModel = viewModel<LearnViewModel>(), walletSharedViewModel)
         }
 
         composable<Screen.BottomNavScreens.Earn> {

@@ -35,7 +35,7 @@ fun Navigation(
         }
     )
     {
-        authNavGraph(navHostController)
+        authNavGraph(navHostController, walletSharedViewModel)
         bottomNavGraph(navHostController, apiService, walletSharedViewModel)
         appNavGraph(navHostController, apiService, walletSharedViewModel)
     }

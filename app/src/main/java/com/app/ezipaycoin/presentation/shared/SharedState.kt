@@ -7,5 +7,6 @@ import com.app.ezipaycoin.utils.ResponseState
 data class SharedState(
     var responseState: ResponseState<BaseResponse<DashboardResponse>> = ResponseState.Idle,
     var selectedCrypto: DashboardResponse.Crypto? = null,
-    var dashboardResponse: DashboardResponse? = null
-    )
+    var dashboardResponse: DashboardResponse? = null,
+    var isRegistered: Boolean = false
+)

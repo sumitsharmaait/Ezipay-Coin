@@ -14,8 +14,7 @@ class MainViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(MainState())
     val uiState: StateFlow<MainState> = _uiState
 
-    var isLoading = mutableStateOf(true)
-        private set
+    private var isLoading = mutableStateOf(true)
 
 
     init {

@@ -74,7 +74,7 @@ fun ConfirmSeedPhraseScreen(
         containerColor = AppBackgroundColor,
         topBar = {
             TopAppBarWithProgressIndicator(currentStep = 3, totalSteps = 3) {
-                /* TODO: Handle on back click */
+                navController.popBackStack()
             }
         },
         bottomBar = {

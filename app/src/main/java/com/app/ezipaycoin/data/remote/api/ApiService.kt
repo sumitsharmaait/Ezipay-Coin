@@ -9,6 +9,7 @@ import com.app.ezipaycoin.data.remote.dto.response.BnbChainResponse
 import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
 import com.app.ezipaycoin.data.remote.dto.response.LoginResponse
 import com.app.ezipaycoin.data.remote.dto.response.NonceResponse
+import com.app.ezipaycoin.data.remote.dto.response.TransactionReceiptResponse
 import com.app.ezipaycoin.data.remote.dto.response.TransactionsResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -31,6 +32,9 @@ interface ApiService {
 
     @POST("/")
     suspend fun payMoney(@Body request: BitPayRequest): BnbChainResponse
+
+    @POST("/")
+    suspend fun transactionReceipt(@Body request: BitPayRequest): TransactionReceiptResponse
 
     @POST("/")
     suspend fun getTransactionCount(@Body request: BitPayRequest): BnbChainResponse

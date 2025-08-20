@@ -48,10 +48,12 @@ fun Staking() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 8.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.Start
     ) {
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             "Active Staking Pools",
@@ -70,7 +72,7 @@ fun Staking() {
                 StakingPoolCard(pool = pool)
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             "Your Stakes",
             style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)

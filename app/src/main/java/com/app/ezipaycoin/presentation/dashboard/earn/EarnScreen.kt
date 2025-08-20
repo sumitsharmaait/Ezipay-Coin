@@ -164,6 +164,7 @@ fun EarnScreen() {
             }
         }
 
+
         when (selectedTabIndex) {
             0 -> Staking()
         }

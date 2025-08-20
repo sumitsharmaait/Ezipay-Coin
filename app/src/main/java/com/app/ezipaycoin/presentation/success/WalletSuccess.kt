@@ -22,28 +22,27 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.navigation.Screen
+import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.ui.composables.GoldGradientButton
 import com.app.ezipaycoin.ui.composables.GradientText
 import com.app.ezipaycoin.ui.composables.TopAppBarWithProgressIndicator
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
-import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
 
 @Composable
 fun WalletSuccess(
-    navController: NavController
+    navController: NavController,
+    walletSharedViewModel: WalletSharedViewModel
 ) {
 
     Scaffold(
         containerColor = AppBackgroundColor,
         topBar = {
             TopAppBarWithProgressIndicator(currentStep = 3, totalSteps = 3) {
-                /* TODO: Handle on back click */
+                navController.popBackStack()
             }
         },
         bottomBar = {
@@ -123,10 +122,10 @@ fun WalletSuccess(
     }
 }
 
-@Preview
-@Composable
-fun CreatePasswordPreview() {
-    EzipayCoinTheme {
-        WalletSuccess(navController = rememberNavController())
-    }
-}
+//@Preview
+//@Composable
+//fun CreatePasswordPreview() {
+//    EzipayCoinTheme {
+//        WalletSuccess(navController = rememberNavController())
+//    }
+//}

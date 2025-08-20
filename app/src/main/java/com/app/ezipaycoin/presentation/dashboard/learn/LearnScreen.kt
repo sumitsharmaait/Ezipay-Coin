@@ -1,5 +1,7 @@
 package com.app.ezipaycoin.presentation.dashboard.learn
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -40,18 +43,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.app.ezipaycoin.R
+import com.app.ezipaycoin.presentation.shared.SharedEvent
+import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.ui.composables.AppGreyButton
-import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
 import com.app.ezipaycoin.ui.theme.Gradient_1
 import com.app.ezipaycoin.ui.theme.Gradient_2
 import com.app.ezipaycoin.ui.theme.Gradient_3
@@ -59,6 +61,7 @@ import com.app.ezipaycoin.ui.theme.Gradient_4
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
 import com.app.ezipaycoin.ui.theme.blueColor
 import com.app.ezipaycoin.ui.theme.greyButtonBackground
+import kotlinx.coroutines.flow.filterIsInstance
 
 data class LearnGridItem(val label: String, val icon: Int)
 data class SocialIconItem(val name: String, val icon: Int)
@@ -66,10 +69,20 @@ data class SocialIconItem(val name: String, val icon: Int)
 @Composable
 fun LearnScreen(
     navController: NavController,
-    viewModel: LearnViewModel
+    viewModel: LearnViewModel,
+    walletSharedViewModel: WalletSharedViewModel
 ) {
-
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        walletSharedViewModel.eventFlow
+            .filterIsInstance<SharedEvent.OpenUrl>()
+            .collect { event ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(event.url))
+                context.startActivity(intent)
+            }
+    }
 
     Column(
         modifier = Modifier
@@ -134,7 +147,7 @@ fun LearnScreen(
 
 
         Spacer(modifier = Modifier.height(24.dp))
-        LearnTopicsGrid()
+        LearnTopicsGrid(walletSharedViewModel)
         Spacer(modifier = Modifier.height(24.dp))
         FeaturedTopicCard(
             title = "How to stake Ezipay?",
@@ -154,7 +167,7 @@ fun LearnScreen(
                     .weight(1f),
                 border = BorderStroke(width = 1.dp, color = Color.Blue),
                 shape = RoundedCornerShape(8.dp),
-                onClick = { /*TODO*/ }) {
+                onClick = { walletSharedViewModel.onOpenLinkClicked("Terms & Conditions") }) {
                 Text(
                     text = "Terms & Conditions",
                     style = MaterialTheme.typography.titleSmall.copy(color = blueColor)
@@ -174,7 +187,7 @@ fun LearnScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        FooterSection()
+        FooterSection(walletSharedViewModel)
         Spacer(modifier = Modifier.height(24.dp))
 
     }
@@ -183,7 +196,7 @@ fun LearnScreen(
 }
 
 @Composable
-fun LearnTopicsGrid() {
+fun LearnTopicsGrid(viewModel: WalletSharedViewModel) {
     val topics = listOf(
         LearnGridItem("Tutorial & Video", R.drawable.tutorial_video),
         LearnGridItem("White Paper & Ideomics", R.drawable.whitepaper_ideomics),
@@ -203,13 +216,15 @@ fun LearnTopicsGrid() {
         userScrollEnabled = false
     ) {
         items(topics) { topic ->
-            TopicGridItem(item = topic)
+            TopicGridItem(item = topic) {
+                viewModel.onOpenLinkClicked(it)
+            }
         }
     }
 }
 
 @Composable
-fun TopicGridItem(item: LearnGridItem) {
+fun TopicGridItem(item: LearnGridItem, onItemSelected: (String) -> Unit) {
     Column(
         modifier = Modifier
             .aspectRatio(0.9f) // Slightly taller than wide
@@ -220,7 +235,7 @@ fun TopicGridItem(item: LearnGridItem) {
             )
             .background(Color.Transparent, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
-            .clickable { /* TODO: Navigate to topic */ }
+            .clickable { onItemSelected(item.label) }
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -346,7 +361,7 @@ fun NewTutorialCard() {
 }
 
 @Composable
-fun FooterSection() {
+fun FooterSection(viewModel: WalletSharedViewModel) {
     val socialIcons = listOf(
         SocialIconItem("Facebook", R.drawable.round_facebook),
         SocialIconItem("X", R.drawable.round_twitter), // Placeholder
@@ -359,7 +374,7 @@ fun FooterSection() {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         socialIcons.forEach { social ->
-            IconButton(onClick = { /* TODO: Open social link */ }) {
+            IconButton(onClick = { viewModel.onOpenLinkClicked(social.name) }) {
                 Icon(
                     painter = painterResource(id = social.icon),
                     contentDescription = social.name,
@@ -372,10 +387,14 @@ fun FooterSection() {
 }
 
 
-@Preview(showBackground = true, backgroundColor = 0xFF000000)
-@Composable
-fun LearnScreenPreview() {
-    EzipayCoinTheme {
-        LearnScreen(navController = rememberNavController(), viewModel<LearnViewModel>())
-    }
-}
+//@Preview(showBackground = true, backgroundColor = 0xFF000000)
+//@Composable
+//fun LearnScreenPreview() {
+//    EzipayCoinTheme {
+//        LearnScreen(
+//            navController = rememberNavController(),
+//            viewModel<LearnViewModel>(),
+//            walletSharedViewModel
+//        )
+//    }
+//}

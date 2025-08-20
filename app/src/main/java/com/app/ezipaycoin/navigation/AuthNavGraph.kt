@@ -15,6 +15,7 @@ import com.app.ezipaycoin.presentation.onboarding.OnboardingScreen
 import com.app.ezipaycoin.presentation.securewallet.SecureWallet
 import com.app.ezipaycoin.presentation.seedphraseview.ViewSeedPhraseViewModel
 import com.app.ezipaycoin.presentation.seedphraseview.WriteDownSeedPhraseScreen
+import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.presentation.success.WalletSuccess
 import com.app.ezipaycoin.presentation.walletsetup.CreateNewWallet
 import com.app.ezipaycoin.presentation.walletsetup.CreatePassword
@@ -24,7 +25,8 @@ import com.app.ezipaycoin.utils.ViewModelFactory
 
 
 fun NavGraphBuilder.authNavGraph(
-    navController: NavHostController
+    navController: NavHostController,
+    walletSharedViewModel: WalletSharedViewModel
 ) {
     navigation<Screen.Auth>(
         startDestination = Screen.Auth.WalkThrough
@@ -80,7 +82,7 @@ fun NavGraphBuilder.authNavGraph(
         }
 
         composable<Screen.Auth.WalletSuccess> {
-            WalletSuccess(navController = navController)
+            WalletSuccess(navController = navController, walletSharedViewModel = walletSharedViewModel)
         }
 
 

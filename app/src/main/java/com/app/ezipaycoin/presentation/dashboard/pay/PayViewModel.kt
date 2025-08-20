@@ -11,6 +11,7 @@ import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.WalletUtils
 import com.google.protobuf.ByteString
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -139,10 +140,16 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
                         }.await()
 
                     if (null == resBnbGasLimit.result) {
+                        val msg =
+                            if (resBnbGasLimit.error?.message?.contains("insufficient funds") == true) {
+                                "Not enough BNB to cover network fees."
+                            } else {
+                                resBnbGasLimit.error?.message ?: "Gas Limit Error"
+                            }
                         _uiState.update {
                             it.copy(
                                 payMoneyResponse = ResponseState.Error(
-                                    resBnbGasLimit.error?.message ?: "Gas Limit Error"
+                                    msg
                                 )
                             )
                         }
@@ -171,7 +178,7 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
                     val amount =
                         BigDecimal(_uiState.value.amount).multiply(BigDecimal("1000000000000000000"))
                             .toBigInteger()
-                    val payload = encodeTransferPayload(_uiState.value.toAddress, amount)
+                    val payload = encodeTransferPayload(_uiState.value.toAddress.trim(), amount)
 
                     val resBnbGasLimit =
                         async {
@@ -284,17 +291,45 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
                 )
                 val res = repository.payMoney(payRequest)
                 if (null != res.result) {
+                    delay(3000)
 
-                    val transactionsDef = async { getTransactions() }
-                    val trans = transactionsDef.await()
-
-                    _uiState.update {
-                        it.copy(
-                            payMoneyResponse = ResponseState.Success(res),
-                            amount = "",
-                            toAddress = ""
-                        )
+                    val receiptRequest = BitPayRequest(
+                        jsonrpc = "2.0",
+                        method = "eth_getTransactionReceipt",
+                        params = listOf(res.result),
+                        id = "1"
+                    )
+                    val transactionReceipt = repository.getTransactionReceipt(receiptRequest)
+                    if (null != transactionReceipt.result) {
+                        if (transactionReceipt.result.status.equals("0x1", true)) {
+                            _uiState.update {
+                                it.copy(
+                                    payMoneyResponse = ResponseState.Success("Transaction Successful."),
+                                    amount = "",
+                                    toAddress = ""
+                                )
+                            }
+                        } else if (transactionReceipt.result.status.equals("0x0", true)) {
+                            _uiState.update {
+                                it.copy(
+                                    payMoneyResponse = ResponseState.Error(
+                                        "Transaction Failed."
+                                    )
+                                )
+                            }
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                payMoneyResponse = ResponseState.Error(
+                                    transactionReceipt.error?.message
+                                        ?: "Transaction is not mined yet."
+                                )
+                            )
+                        }
                     }
+                    delay(3000)
+                    getTransactions()
                 } else {
                     _uiState.update {
                         it.copy(
@@ -375,7 +410,7 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
                 ByteString.copyFrom(BigInteger(nonce.removePrefix("0x"), 16).toByteArray())
             this.gasPrice = BigInteger(gasPrice.removePrefix("0x"), 16).toByteString()
             this.gasLimit = BigInteger(gasLimit.removePrefix("0x"), 16).toByteString()
-            this.toAddress = _uiState.value.toAddress
+            this.toAddress = _uiState.value.toAddress.trim()
             this.transaction = Ethereum.Transaction.newBuilder().apply {
                 this.transfer = Ethereum.Transaction.Transfer.newBuilder()
                     .setAmount(ByteString.copyFrom(amountBytes))
@@ -443,7 +478,7 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
         val hexValue = BigDecimal(_uiState.value.amount).multiply(BigDecimal("1000000000000000000"))
             .toBigInteger()
         val to = if (crypto.equals("BNB", true)) {
-            _uiState.value.toAddress
+            _uiState.value.toAddress.trim()
         } else if (crypto.equals("EZPT", true)) {
             WalletUtils.EZPT_TOKEN_CONTRACT
         } else {

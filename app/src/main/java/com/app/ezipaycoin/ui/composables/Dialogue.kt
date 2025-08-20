@@ -35,6 +35,7 @@ import com.app.ezipaycoin.ui.theme.Gradient_2
 import com.app.ezipaycoin.ui.theme.Gradient_3
 import com.app.ezipaycoin.ui.theme.Gradient_4
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
+import com.app.ezipaycoin.ui.theme.sendAmountTextColor
 
 @Composable
 fun Dialogue(isError: Boolean, msg: String, onDismissRequest: () -> Unit) {
@@ -71,14 +72,14 @@ fun Dialogue(isError: Boolean, msg: String, onDismissRequest: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .size(80.dp)
-                        .background(DialogIconCircleGreen.copy(alpha = 0.1f), CircleShape)
-                        .border(1.dp, DialogIconCircleGreen, CircleShape),
+                        .background(if (isError) sendAmountTextColor.copy(alpha = 0.1f) else DialogIconCircleGreen.copy(alpha = 0.1f), CircleShape)
+                        .border(1.dp, if (isError) sendAmountTextColor else DialogIconCircleGreen, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isError) Icons.Filled.ErrorOutline else Icons.Filled.Check,
                         contentDescription = "Success",
-                        tint = DialogIconCircleGreen,
+                        tint = if (isError) sendAmountTextColor else DialogIconCircleGreen,
                         modifier = Modifier.size(40.dp)
                     )
                 }

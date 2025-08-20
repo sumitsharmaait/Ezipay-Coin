@@ -6,6 +6,7 @@ import com.app.ezipaycoin.data.remote.dto.request.EstimateGasRequest
 import com.app.ezipaycoin.data.remote.dto.request.TransactionsRequest
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
 import com.app.ezipaycoin.data.remote.dto.response.BnbChainResponse
+import com.app.ezipaycoin.data.remote.dto.response.TransactionReceiptResponse
 import com.app.ezipaycoin.data.remote.dto.response.TransactionsResponse
 import com.app.ezipaycoin.domain.repository.TransactionsRepository
 
@@ -18,6 +19,10 @@ class TransactionRepoImpl(private val apiService: ApiService, private val bitSer
 
     override suspend fun payMoney(request: BitPayRequest): BnbChainResponse {
         return bitService.payMoney(request)
+    }
+
+    override suspend fun getTransactionReceipt(request: BitPayRequest): TransactionReceiptResponse {
+        return bitService.transactionReceipt(request)
     }
 
     override suspend fun getTransactionCount(request: BitPayRequest): BnbChainResponse {

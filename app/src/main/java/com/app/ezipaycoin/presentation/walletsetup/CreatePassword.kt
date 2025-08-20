@@ -82,7 +82,7 @@ fun CreatePassword(
         containerColor = AppBackgroundColor,
         topBar = {
             TopAppBarWithProgressIndicator(currentStep = 1, totalSteps = 3) {
-                /* TODO: Handle on back click */
+                navController.popBackStack()
             }
         },
         bottomBar = {

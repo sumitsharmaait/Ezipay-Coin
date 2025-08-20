@@ -66,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -98,6 +99,7 @@ import com.app.ezipaycoin.ui.theme.receivedAmountTextColor
 import com.app.ezipaycoin.ui.theme.sendAmountBackgroundColor
 import com.app.ezipaycoin.ui.theme.sendAmountTextColor
 import com.app.ezipaycoin.utils.ResponseState
+import com.app.ezipaycoin.utils.pasteFromClipboard
 import com.app.ezipaycoin.utils.shortenAddress
 import kotlin.math.roundToInt
 
@@ -208,6 +210,7 @@ private fun DirectPayContent(
     sharedViewModel: WalletSharedViewModel,
     modifier: Modifier
 ) {
+    val context = LocalContext.current
     LazyColumn(
         // Use LazyColumn for scrollable content with fixed bottom
         modifier = modifier
@@ -229,7 +232,11 @@ private fun DirectPayContent(
                         Icons.Filled.ContentPaste,
                         contentDescription = "Search",
                         tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable {
+                                context.pasteFromClipboard()
+                            }
                     )
                 }
             )
@@ -728,14 +735,12 @@ private fun SlideToPayButtonSection(
             }
 
             is ResponseState.Success -> {
-                (state.payMoneyResponse as ResponseState.Success).data.result?.let {
-                    Dialogue(
-                        isError = false,
-                        msg = it
-                    ) {
-                        sharedViewModel.onEvent(SharedEvent.FetchBalance)
-                        vm.onEvent(PayEvent.DismissDialog)
-                    }
+                Dialogue(
+                    isError = false,
+                    msg = (state.payMoneyResponse as ResponseState.Success).data
+                ) {
+                    sharedViewModel.onEvent(SharedEvent.FetchBalance)
+                    vm.onEvent(PayEvent.DismissDialog)
                 }
             }
 
