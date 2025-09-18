@@ -53,6 +53,12 @@ sealed class Screen(val route: String) {
         @Serializable
         data object Receive
 
+        @Serializable
+        data object Transactions
+
+        @Serializable
+        data object TransactionDetails
+
     }
 
     @Serializable

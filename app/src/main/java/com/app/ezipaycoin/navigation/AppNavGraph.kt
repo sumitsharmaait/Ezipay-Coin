@@ -14,7 +14,11 @@ import com.app.ezipaycoin.presentation.profile.MyProfile
 import com.app.ezipaycoin.presentation.profile.MyProfileViewModel
 import com.app.ezipaycoin.presentation.receive.ReceiveScreen
 import com.app.ezipaycoin.presentation.receive.ReceiveViewModel
+import com.app.ezipaycoin.presentation.shared.SharedEvent
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
+import com.app.ezipaycoin.presentation.transactiondetails.TransactionDetailsScreen
+import com.app.ezipaycoin.presentation.transactions.AllTransactionsViewModel
+import com.app.ezipaycoin.presentation.transactions.TransactionScreen
 import com.app.ezipaycoin.utils.ViewModelFactory
 
 fun NavGraphBuilder.appNavGraph(
@@ -34,8 +38,36 @@ fun NavGraphBuilder.appNavGraph(
                     PayViewModel(repository)
                 }
             )
-            PayScreen(navController, payViewModel, sharedViewModel = walletSharedViewModel)
+            PayScreen(
+                navController,
+                payViewModel,
+                sharedViewModel = walletSharedViewModel,
+                onClickViewAllTransactions = { navController.navigate(Screen.AppNavScreens.Transactions) })
         }
+
+
+        composable<Screen.AppNavScreens.Transactions> {
+            val allTransactionsViewModel: AllTransactionsViewModel = viewModel(
+                factory = ViewModelFactory {
+                    val repository = TransactionRepoImpl(apiService, bitTransactions)
+                    AllTransactionsViewModel(repository)
+                }
+            )
+            TransactionScreen(
+                navController = navController,
+                viewModel = allTransactionsViewModel,
+                onTransactionClick = {
+                    walletSharedViewModel.onEvent(SharedEvent.TransactionSelected(it))
+                    navController.navigate(Screen.AppNavScreens.TransactionDetails)
+                })
+        }
+
+        composable<Screen.AppNavScreens.TransactionDetails> {
+            walletSharedViewModel.uiState.value.selectedTransaction?.let {
+                TransactionDetailsScreen(item = it, onExplorerClick = {})
+            }
+        }
+
         composable<Screen.AppNavScreens.MyProfile> {
             MyProfile(viewModel = viewModel<MyProfileViewModel>())
         }

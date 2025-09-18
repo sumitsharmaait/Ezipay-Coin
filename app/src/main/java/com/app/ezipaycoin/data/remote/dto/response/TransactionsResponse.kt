@@ -19,7 +19,8 @@ data class TransactionsResponse(
         val fiatValue: String,
         val timestamp: String,
         val status: String,
-        val to: String
+        val to: String,
+        val from: String
     ) {
         val formattedAmount: String
             get() = String.format(Locale.US, "%.4f", amount)

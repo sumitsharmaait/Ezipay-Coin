@@ -151,23 +151,6 @@ fun WalletSetUp(navController: NavController) {
                         .weight(1f)
                 )
 
-//                Button(
-//                    onClick = { navController.navigate(Screen.Auth.ImportFromSeed) },
-//                    modifier = Modifier
-//                        .weight(1f)
-//                        .height(50.dp)
-//                        .clip(RoundedCornerShape(80)),
-//                    colors = ButtonDefaults.buttonColors(
-//                        containerColor = greyButtonBackground,
-//                        contentColor = TextPrimaryColor
-//                    )
-//                ) {
-//                    Text(
-//                        "Import Seed",
-//                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight(500))
-//                    )
-//                }
-
                 GoldGradientButton(
                     label = "Create New",
                     onClick = { navController.navigate(Screen.Auth.CreatePassword) },

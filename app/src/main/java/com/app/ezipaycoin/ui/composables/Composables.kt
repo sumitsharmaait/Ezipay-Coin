@@ -74,7 +74,7 @@ fun GoldGradientButton(label: String, onClick: () -> Unit, modifier: Modifier = 
         Text(
             label,
             color = Color.White,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight(700))
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(500))
         )
     }
 
@@ -269,7 +269,7 @@ fun AppGreyButton(
     ) {
         Text(
             label,
-            style = MaterialTheme.typography.bodyMedium.copy(
+            style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight(500),
                 color = labelColor
             )

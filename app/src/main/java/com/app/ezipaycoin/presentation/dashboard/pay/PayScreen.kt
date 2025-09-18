@@ -109,7 +109,8 @@ enum class PayScreenTab { DirectPay, Utilities }
 fun PayScreen(
     navController: NavController,
     viewModel: PayViewModel,
-    sharedViewModel: WalletSharedViewModel
+    sharedViewModel: WalletSharedViewModel,
+    onClickViewAllTransactions: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val sharedState by sharedViewModel.uiState.collectAsState()
@@ -132,7 +133,8 @@ fun PayScreen(
                     state,
                     sharedState,
                     sharedViewModel,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    onClickViewAllTransactions
                 )
 
                 PayScreenTab.Utilities -> UtilitiesContent(
@@ -208,7 +210,8 @@ private fun DirectPayContent(
     state: PayState,
     sharedState: SharedState,
     sharedViewModel: WalletSharedViewModel,
-    modifier: Modifier
+    modifier: Modifier,
+    onClickViewAllTransactions: () -> Unit
 ) {
     val context = LocalContext.current
     LazyColumn(
@@ -251,7 +254,7 @@ private fun DirectPayContent(
             }
         }
         item { Spacer(modifier = Modifier.height(24.dp)) }
-        item { RecentPayeesSection(vm, state) }
+        item { RecentPayeesSection(vm, state, onClickViewAllTransactions) }
         item { Spacer(modifier = Modifier.height(24.dp)) }
         item {
             PaymentDetailsSection(
@@ -292,7 +295,11 @@ data class Payee(
 )
 
 @Composable
-private fun RecentPayeesSection(vm: PayViewModel, state: PayState) {
+private fun RecentPayeesSection(
+    vm: PayViewModel,
+    state: PayState,
+    onClickViewAllTransactions: () -> Unit
+) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -305,7 +312,7 @@ private fun RecentPayeesSection(vm: PayViewModel, state: PayState) {
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { /* TODO */ }) {
+                modifier = Modifier.clickable { onClickViewAllTransactions() }) {
                 Text(
                     "View All",
                     style = MaterialTheme.typography.titleSmall.copy(color = Color.White)

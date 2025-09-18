@@ -18,6 +18,8 @@ data class MainState(
         "Pay",
         "MyProfile",
         "Referrals & Rewards",
-        "Receive"
+        "Receive",
+        "Transactions",
+        "TransactionDetails"
     )
 )

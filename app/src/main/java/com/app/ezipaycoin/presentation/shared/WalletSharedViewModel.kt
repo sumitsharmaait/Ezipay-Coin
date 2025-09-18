@@ -37,6 +37,12 @@ class WalletSharedViewModel(
             }
 
             is SharedEvent.OpenUrl -> TODO()
+
+            is SharedEvent.TransactionSelected -> {
+                _uiState.update {
+                    it.copy(selectedTransaction = event.transaction)
+                }
+            }
         }
     }
 
@@ -117,7 +123,7 @@ class WalletSharedViewModel(
             "Instagram" -> "https://www.instagram.com/ezipaycoin/"
             "YouTube" -> "https://www.ezipaycoin.com/"
             "Terms & Conditions" -> "https://www.ezipaycoin.com/terms"
-            "FAQ & Troubleshoot","FAQ & Help Center" -> "https://www.ezipaycoin.com/faq"
+            "FAQ & Troubleshoot", "FAQ & Help Center" -> "https://www.ezipaycoin.com/faq"
             "Telegram" -> "https://t.me/ezipaycoin"
             "Discord" -> "https://discord.com/invite/MRpZmUJP"
             else -> "https://www.ezipaycoin.com/"

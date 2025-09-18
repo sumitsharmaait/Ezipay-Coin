@@ -1,13 +1,11 @@
 package com.app.ezipaycoin.presentation.walletsetup
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,8 +18,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,8 +25,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,11 +50,11 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.app.ezipaycoin.R
+import com.app.ezipaycoin.ui.composables.AppTextField
 import com.app.ezipaycoin.ui.composables.FaceIdToggleRow
 import com.app.ezipaycoin.ui.composables.GoldGradientButton
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
-import com.app.ezipaycoin.ui.theme.GoldAccentColor
 import com.app.ezipaycoin.ui.theme.GoldTextColor
 import com.app.ezipaycoin.ui.theme.Gradient_1
 import com.app.ezipaycoin.ui.theme.Gradient_2
@@ -68,7 +62,6 @@ import com.app.ezipaycoin.ui.theme.Gradient_3
 import com.app.ezipaycoin.ui.theme.Gradient_4
 import com.app.ezipaycoin.ui.theme.TextHintColor
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
-import com.app.ezipaycoin.ui.theme.grey_22
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,27 +120,12 @@ fun ImportFromSeedScreen(navController: NavController) {
                     value = seedPhrase,
                     onValueChange = { seedPhrase = it },
                     label = "Seed Phrase",
-                    visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    isPasswordToggleEnabled = true,
-                    passwordVisible = newPasswordVisible,
-                    onPasswordVisibilityChange = { newPasswordVisible = it },
-                    minLines = 3,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    minLines = 2,
+                    isTextArea = true,
                     modifier = Modifier.weight(1f),
                 )
 
-//                AppTextField(
-//                    value = seedPhrase,
-//                    onValueChange = { seedPhrase = it },
-//                    label = "Seed Phrase",
-//                    modifier = Modifier.weight(1f),
-//                    trailingIcon = { Icons.Filled.Visibility },
-//                    isTextArea = true,
-//                    isPasswordToggleEnabled = true,
-//                    passwordVisible = newPasswordVisible,
-//                    visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-//                    minLines = 3 // As it looks like a multi-line input
-//                )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(onClick = { /* TODO: Handle Scan Seed Phrase */ }) {
                     Icon(
@@ -213,90 +191,6 @@ fun ImportFromSeedScreen(navController: NavController) {
         }
     }
 }
-
-@Composable
-fun AppTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    trailingIcon: @Composable (() -> Unit)? = null, // Custom trailing icon if needed
-    isPasswordToggleEnabled: Boolean = false,
-    passwordVisible: Boolean = false,
-    onPasswordVisibilityChange: ((Boolean) -> Unit)? = null,
-    isTextArea: Boolean = false,
-    minLines: Int = 1
-) {
-    TextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier
-            .fillMaxWidth()
-            .border(1.dp, grey_22, RoundedCornerShape(12.dp))
-            .then(if (isTextArea) Modifier.defaultMinSize(minHeight = (minLines * 48).dp) else Modifier), // Approximate height
-        label = { Text(label, color = TextHintColor) },
-        visualTransformation = visualTransformation,
-        keyboardOptions = keyboardOptions,
-        singleLine = !isTextArea,
-        minLines = if (isTextArea) minLines else 1,
-        colors = TextFieldDefaults.colors(
-            focusedTextColor = TextPrimaryColor,
-            unfocusedTextColor = TextPrimaryColor,
-            disabledTextColor = TextHintColor,
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            disabledContainerColor = Color.Transparent,
-            cursorColor = GoldAccentColor,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            disabledIndicatorColor = Color.Transparent,
-            focusedLabelColor = TextHintColor, // Keep label color consistent
-            unfocusedLabelColor = TextHintColor,
-        ),
-        trailingIcon = if (isPasswordToggleEnabled && onPasswordVisibilityChange != null) {
-            {
-                val image = if (passwordVisible)
-                    Icons.Filled.Visibility
-                else Icons.Filled.VisibilityOff
-                val description = if (passwordVisible) "Hide password" else "Show password"
-                IconButton(onClick = { onPasswordVisibilityChange(!passwordVisible) }) {
-                    Icon(imageVector = image, description, tint = TextHintColor)
-                }
-            }
-        } else trailingIcon
-    )
-}
-
-//@Composable
-//fun FaceIdToggleRow(
-//    checked: Boolean,
-//    onCheckedChange: (Boolean) -> Unit
-//) {
-//    Row(
-//        modifier = Modifier.fillMaxWidth(),
-//        verticalAlignment = Alignment.CenterVertically,
-//        horizontalArrangement = Arrangement.SpaceBetween
-//    ) {
-//        Text(
-//            text = "Sign in with Face ID?",
-//            style = MaterialTheme.typography.bodyMedium
-//        )
-//        Switch(
-//            checked = checked,
-//            onCheckedChange = onCheckedChange,
-//            colors = SwitchDefaults.colors(
-//                checkedThumbColor = Color.White,
-//                checkedTrackColor = GoldAccentColor,
-//                uncheckedThumbColor = Color(0xFFE0E0E0),
-//                uncheckedTrackColor = Color(0xFF757575), // A bit lighter than text field bg
-//                checkedBorderColor = Color.Transparent,
-//                uncheckedBorderColor = Color.Transparent
-//            )
-//        )
-//    }
-//}
 
 @Composable
 fun TermsAndConditionsText() {
