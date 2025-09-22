@@ -11,6 +11,8 @@ import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.repository.AuthRepoImpl
 import com.app.ezipaycoin.presentation.confirmseedphrase.ConfirmSeedPhraseScreen
 import com.app.ezipaycoin.presentation.confirmseedphrase.ConfirmSeedPhraseViewModel
+import com.app.ezipaycoin.presentation.importfromseed.ImportFromSeedScreen
+import com.app.ezipaycoin.presentation.importfromseed.ImportFromSeedViewModel
 import com.app.ezipaycoin.presentation.onboarding.OnboardingScreen
 import com.app.ezipaycoin.presentation.securewallet.SecureWallet
 import com.app.ezipaycoin.presentation.seedphraseview.ViewSeedPhraseViewModel
@@ -19,7 +21,6 @@ import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.presentation.success.WalletSuccess
 import com.app.ezipaycoin.presentation.walletsetup.CreateNewWallet
 import com.app.ezipaycoin.presentation.walletsetup.CreatePassword
-import com.app.ezipaycoin.presentation.walletsetup.ImportFromSeedScreen
 import com.app.ezipaycoin.presentation.walletsetup.WalletSetUp
 import com.app.ezipaycoin.utils.ViewModelFactory
 
@@ -28,6 +29,9 @@ fun NavGraphBuilder.authNavGraph(
     navController: NavHostController,
     walletSharedViewModel: WalletSharedViewModel
 ) {
+    val apiService = ApiClient.retrofit.create(ApiService::class.java)
+    val repository = AuthRepoImpl(apiService)
+
     navigation<Screen.Auth>(
         startDestination = Screen.Auth.WalkThrough
     ) {
@@ -40,7 +44,12 @@ fun NavGraphBuilder.authNavGraph(
         }
 
         composable<Screen.Auth.ImportFromSeed> {
-            ImportFromSeedScreen(navController = navController)
+            val importFromSeedViewModel: ImportFromSeedViewModel = viewModel(
+                factory = ViewModelFactory {
+                    ImportFromSeedViewModel(repository)
+                }
+            )
+            ImportFromSeedScreen(navController = navController, importFromSeedViewModel)
         }
 
         composable<Screen.Auth.CreatePassword> {
@@ -58,8 +67,6 @@ fun NavGraphBuilder.authNavGraph(
         composable<Screen.Auth.SeedPhrase> {
             val viewSeedPhraseViewModel: ViewSeedPhraseViewModel = viewModel(
                 factory = ViewModelFactory {
-                    val apiService = ApiClient.retrofit.create(ApiService::class.java)
-                    val repository = AuthRepoImpl(apiService)
                     ViewSeedPhraseViewModel(repository)
                 }
             )
@@ -69,8 +76,6 @@ fun NavGraphBuilder.authNavGraph(
             val seeds = backStackEntry.toRoute<Screen.Auth.SeedPhraseVerify>()
             val confirmSeedPhraseViewModel: ConfirmSeedPhraseViewModel = viewModel(
                 factory = ViewModelFactory {
-                    val apiService = ApiClient.retrofit.create(ApiService::class.java)
-                    val repository = AuthRepoImpl(apiService)
                     ConfirmSeedPhraseViewModel(repository)
                 }
             )
@@ -82,7 +87,10 @@ fun NavGraphBuilder.authNavGraph(
         }
 
         composable<Screen.Auth.WalletSuccess> {
-            WalletSuccess(navController = navController, walletSharedViewModel = walletSharedViewModel)
+            WalletSuccess(
+                navController = navController,
+                walletSharedViewModel = walletSharedViewModel
+            )
         }
 
 

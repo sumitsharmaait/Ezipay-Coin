@@ -8,7 +8,7 @@ import com.app.ezipaycoin.data.remote.dto.request.TransactionsRequest
 import com.app.ezipaycoin.domain.repository.TransactionsRepository
 import com.app.ezipaycoin.presentation.App
 import com.app.ezipaycoin.utils.ResponseState
-import com.app.ezipaycoin.utils.WalletUtils
+import com.app.ezipaycoin.utils.WalletManager
 import com.google.protobuf.ByteString
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -368,7 +368,7 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
                     "EZPT",
                     true
                 )
-            ) WalletUtils.EZPT_TOKEN_CONTRACT else WalletUtils.USDT_TOKEN_CONTRACT,
+            ) WalletManager.EZPT_TOKEN_CONTRACT else WalletManager.USDT_TOKEN_CONTRACT,
             CoinType.SMARTCHAIN
         )
 
@@ -480,9 +480,9 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
         val to = if (crypto.equals("BNB", true)) {
             _uiState.value.toAddress.trim()
         } else if (crypto.equals("EZPT", true)) {
-            WalletUtils.EZPT_TOKEN_CONTRACT
+            WalletManager.EZPT_TOKEN_CONTRACT
         } else {
-            WalletUtils.USDT_TOKEN_CONTRACT
+            WalletManager.USDT_TOKEN_CONTRACT
         }
         val params = listOf(
             EstimateGasRequest.ParamObj(

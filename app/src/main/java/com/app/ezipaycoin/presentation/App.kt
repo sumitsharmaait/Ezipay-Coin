@@ -14,11 +14,9 @@ import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.School
-
 import androidx.datastore.dataStore
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesSerializer
 import com.app.ezipaycoin.ui.composables.BottomNavItem
-import wallet.core.jni.HDWallet
 
 class App : Application() {
 
@@ -42,9 +40,6 @@ class App : Application() {
         serializer = UserPreferencesSerializer
     )
 
-    val wallet by lazy {
-        HDWallet(128, "")
-    }
 
 
     val items = listOf(

@@ -2,10 +2,10 @@ package com.app.ezipaycoin.presentation.seedphraseview
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.ezipaycoin.presentation.App
 import com.app.ezipaycoin.data.repository.AuthRepoImpl
 import com.app.ezipaycoin.utils.SnackbarController
 import com.app.ezipaycoin.utils.SnackbarEvent
+import com.app.ezipaycoin.utils.WalletManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -17,7 +17,7 @@ class ViewSeedPhraseViewModel(private val repository: AuthRepoImpl) : ViewModel(
 
     init {
         viewModelScope.launch {
-            val wallet = App.getInstance().wallet
+            val wallet = WalletManager.createNewWallet()
             _uiState.value = _uiState.value.copy(seedWords = wallet.mnemonic().split(" "))
         }
     }

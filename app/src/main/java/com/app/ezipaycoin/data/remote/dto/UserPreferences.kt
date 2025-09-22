@@ -21,7 +21,8 @@ data class UserPreferences(
     val token: String? = null,
     val userName: String? = null,
     val userEmail: String? = null,
-    val userProfile: String? = null
+    val userProfile: String? = null,
+    val seedPhrase : String? = null
 )
 
 

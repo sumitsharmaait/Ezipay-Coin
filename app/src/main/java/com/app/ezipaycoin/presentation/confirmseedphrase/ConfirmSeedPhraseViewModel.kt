@@ -9,6 +9,7 @@ import com.app.ezipaycoin.presentation.App
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SnackbarController
 import com.app.ezipaycoin.utils.SnackbarEvent
+import com.app.ezipaycoin.utils.WalletManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,11 +54,12 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
                     _uiState.update { it.copy(confirmedSeeds = seeds) }
 
                     if (_uiState.value.confirmedSeeds.size == 3) {
-                        val wallet = App.getInstance().wallet
-                        val privateKey = wallet.getKeyForCoin(CoinType.ETHEREUM)
-                        val address = CoinType.ETHEREUM.deriveAddress(privateKey)
-                        getNonce(address, privateKey)
-
+                        if (WalletManager.isInitialized()) {
+                            val wallet = WalletManager.wallet
+                            val privateKey = wallet.getKeyForCoin(CoinType.ETHEREUM)
+                            val address = CoinType.ETHEREUM.deriveAddress(privateKey)
+                            getNonce(address, privateKey)
+                        }
                     } else {
                         createDistract(originalSeeds, (4..8).random())
                     }

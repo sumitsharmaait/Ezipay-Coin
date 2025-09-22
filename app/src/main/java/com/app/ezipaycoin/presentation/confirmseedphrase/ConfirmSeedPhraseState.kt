@@ -10,6 +10,6 @@ data class ConfirmSeedPhraseState(
     val confirmedIndex : Int = 0,
     val distractSeeds : List<String> = emptyList(),
     var confirmedSeeds : MutableList<String> = mutableListOf(),
-    var responseState: ResponseState<BaseResponse<NonceResponse>> = ResponseState.Loading
+    var responseState: ResponseState<BaseResponse<NonceResponse>> = ResponseState.Idle
 
 )
