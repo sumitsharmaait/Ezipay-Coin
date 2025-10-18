@@ -9,6 +9,7 @@ data class SharedState(
     var responseState: ResponseState<BaseResponse<DashboardResponse>> = ResponseState.Idle,
     var selectedCrypto: DashboardResponse.Crypto? = null,
     var dashboardResponse: DashboardResponse? = null,
-    var isRegistered: Boolean = false,
-    var selectedTransaction: TransactionsResponse.TransactionsItem? = null
+    //var isRegistered: Boolean = false,
+    var selectedTransaction: TransactionsResponse.TransactionsItem? = null,
+    var isUnlocked: Boolean = false
 )

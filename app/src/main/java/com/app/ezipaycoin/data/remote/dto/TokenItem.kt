@@ -1,7 +1,9 @@
 package com.app.ezipaycoin.data.remote.dto
 
 import androidx.annotation.DrawableRes
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class TokenItem(
     @DrawableRes val iconRes: Int,
     val iconText: String? = null, // For tokens like USD where you might just draw text in a circle

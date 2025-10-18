@@ -1,6 +1,11 @@
 package com.app.ezipaycoin.presentation.profile
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,8 +33,9 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -50,173 +56,255 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.app.ezipaycoin.R
+import com.app.ezipaycoin.navigation.Screen
+import com.app.ezipaycoin.presentation.main.MainActivity
 import com.app.ezipaycoin.ui.composables.AppGreyButton
-import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
+import com.app.ezipaycoin.ui.composables.EditableText
 import com.app.ezipaycoin.ui.theme.Gradient_1
 import com.app.ezipaycoin.ui.theme.Gradient_2
 import com.app.ezipaycoin.ui.theme.Gradient_3
 import com.app.ezipaycoin.ui.theme.Gradient_4
+import com.app.ezipaycoin.ui.theme.OnboardingGold1
 import com.app.ezipaycoin.ui.theme.greyButtonBackground
 import com.app.ezipaycoin.ui.theme.tagsBackgroundColor
 import com.app.ezipaycoin.ui.theme.tagsTextColor
+import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.copyToClipboard
+import java.io.File
 
 @Composable
-fun MyProfile(viewModel: MyProfileViewModel) {
+fun MyProfile(
+    navController: NavController,
+    viewModel: MyProfileViewModel
+) {
 
     val state by viewModel.uiState.collectAsState()
     val context: Context = LocalContext.current
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val file = uriToFile(context, uri)
+            viewModel.onEvent(MyProfileEvent.ImageSelected(it, file))
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-
-        Box {
-            Image(
-                // IMPORTANT: Replace with your actual profile image resource
-                painter = painterResource(id = R.drawable.ic_ezipay_coin_small),
-                contentDescription = "Profile Picture",
-                modifier = Modifier
-                    .size(140.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            val goldGradient = Brush.linearGradient(
-                colors = listOf(Gradient_1, Gradient_2, Gradient_3, Gradient_4)
-            )
-            FloatingActionButton(
-                onClick = { /* TODO: Handle Edit Profile Picture */ },
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .align(Alignment.BottomEnd)
-                    .offset(x = (0).dp, y = (0).dp)
-                    .background(goldGradient),
-                shape = CircleShape,
-                containerColor = Color.Transparent,
-                contentColor = Color.Black,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp)
-            ) {
-                Icon(
-                    Icons.Filled.Edit,
-                    contentDescription = "Edit Profile Picture",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(state.name, style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = "Regular",
-                style = MaterialTheme.typography.titleSmall.copy(color = tagsTextColor),
-                modifier = Modifier
-                    .background(tagsBackgroundColor, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            )
-            Text(
-                text = "Verified",
-                style = MaterialTheme.typography.titleSmall.copy(color = tagsTextColor),
-                modifier = Modifier
-                    .background(tagsBackgroundColor, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            )
-
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = greyButtonBackground,
-                    shape = RoundedCornerShape(12.dp)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box {
+                if (!state.profile.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = if (state.selectedImageUri == null) state.profile else state.selectedImageUri,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier
+                            .size(140.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop,
+                        placeholder = painterResource(id = R.drawable.ic_ezipay_coin_small),
+                        error = painterResource(id = R.drawable.ic_ezipay_coin_small)
+                    )
+                } else {
+                    Image(
+                        // IMPORTANT: Replace with your actual profile image resource
+                        painter = painterResource(id = R.drawable.ic_ezipay_coin_small),
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier
+                            .size(140.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                if (state.uploadImageResponseState is ResponseState.Loading) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .size(140.dp)
+                            .clip(CircleShape), // optional: dim background
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = OnboardingGold1)
+                    }
+                }
+
+                val goldGradient = Brush.linearGradient(
+                    colors = listOf(Gradient_1, Gradient_2, Gradient_3, Gradient_4)
                 )
-                .clip(MaterialTheme.shapes.medium)
-                .padding(16.dp)
-        ) {
-            UserInfoRow(
-                "ID",
-                state.walletAddress,
-                Icons.Filled.ContentCopy,
-                "Copy ID"
-            ) {
-                context.copyToClipboard(state.walletAddress, "WalletAddress")
-            }
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outline
-            )
-            UserInfoRow(
-                "Email",
-                state.email,
-                Icons.Filled.VisibilityOff,
-                "Toggle Email Visibility"
-            ) { /* TODO: Toggle Email */ }
-        }
-
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        val settings = listOf(
-            SettingItem(
-                Icons.Filled.WorkspacePremium,
-                "VIP Privilege",
-                "Regular"
-            ) { /* TODO */ },
-            SettingItem(
-                Icons.Filled.PersonOutline,
-                "Verifications",
-                "Verified",
-            ) { /* TODO */ },
-            SettingItem(Icons.Filled.Shield, "Security") { /* TODO */ },
-            SettingItem(
-                Icons.Filled.Close,
-                "Twitter",
-                "Linked"
-            ) { /* TODO */ } // Assuming X is Twitter
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(greyButtonBackground, MaterialTheme.shapes.medium)
-                .clip(MaterialTheme.shapes.medium)
-        ) {
-            settings.forEachIndexed { index, item ->
-                SettingRow(item)
-                if (index < settings.lastIndex) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        color = MaterialTheme.colorScheme.outline
+                FloatingActionButton(
+                    onClick = { galleryLauncher.launch("image/*") },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .align(Alignment.BottomEnd)
+                        .offset(x = (0).dp, y = (0).dp)
+                        .background(goldGradient),
+                    shape = CircleShape,
+                    containerColor = Color.Transparent,
+                    contentColor = Color.Black,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = "Edit Profile Picture",
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            EditableText(
+                state.name,
+                state.responseState,
+                onSave = { newName ->
+                    viewModel.onEvent(MyProfileEvent.UpdateName(newName))
+                })
+            //Text(state.name, style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Regular",
+                    style = MaterialTheme.typography.titleSmall.copy(color = tagsTextColor),
+                    modifier = Modifier
+                        .background(tagsBackgroundColor, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+                Text(
+                    text = "Pending",
+                    style = MaterialTheme.typography.titleSmall.copy(color = tagsTextColor),
+                    modifier = Modifier
+                        .background(tagsBackgroundColor, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(
+                        width = 1.dp,
+                        color = greyButtonBackground,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .clip(MaterialTheme.shapes.medium)
+                    .padding(16.dp)
+            ) {
+                UserInfoRow(
+                    "ID",
+                    state.walletAddress,
+                    Icons.Filled.ContentCopy,
+                    "Copy ID"
+                ) {
+                    context.copyToClipboard(state.walletAddress, "WalletAddress")
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outline
+                )
+                UserInfoRow(
+                    "Email",
+                    state.email,
+                    Icons.Filled.Visibility,
+                    "Toggle Email Visibility"
+                ) { /* TODO: Toggle Email */ }
+            }
+
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            val settings = listOf(
+                SettingItem(
+                    Icons.Filled.WorkspacePremium,
+                    "VIP Privilege",
+                    "Regular"
+                ) { /* TODO */ },
+                SettingItem(
+                    Icons.Filled.PersonOutline,
+                    "Verifications",
+                    "Pending",
+                ) { /* TODO */ },
+                SettingItem(
+                    Icons.Filled.Shield,
+                    "Security"
+                ) { navController.navigate(Screen.AppNavScreens.WalletDetails) },
+                SettingItem(
+                    Icons.Filled.Close,
+                    "Twitter",
+                    "Pending"
+                ) { /* TODO */ } // Assuming X is Twitter
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(greyButtonBackground, MaterialTheme.shapes.medium)
+                    .clip(MaterialTheme.shapes.medium)
+            ) {
+                settings.forEachIndexed { index, item ->
+                    SettingRow(item)
+                    if (index < settings.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 16.dp),
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            AppGreyButton(
+                labelColor = Color.White,
+                label = "Log Out",
+                onClick = { viewModel.onEvent(MyProfileEvent.LogOut) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp, top = 8.dp)
+            )
+
         }
+        if (state.logoutResponseState is ResponseState.Loading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f)), // optional: dim background
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = OnboardingGold1)
+            }
+        } else if (state.logoutResponseState is ResponseState.Success) {
+            val intent = Intent(context, MainActivity::class.java)
+            intent.addFlags(
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TASK
+            )
+            context.startActivity(intent)
 
-        Spacer(modifier = Modifier.height(24.dp))
+            if (context is Activity) {
+                context.finish()
+            }
 
-        AppGreyButton(
-            labelColor = Color.White,
-            label = "Log Out",
-            onClick = { },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 20.dp, top = 8.dp)
-        )
-
+            // Optional: kill background tasks for clean restart
+            Runtime.getRuntime().exit(0)
+        }
     }
+
 
 }
 
@@ -308,10 +396,21 @@ data class SettingItem(
     val onClick: () -> Unit
 )
 
-@Preview
-@Composable
-fun ProfileScreenSmallerPreview() {
-    EzipayCoinTheme {
-        MyProfile(viewModel<MyProfileViewModel>())
+fun uriToFile(context: Context, uri: Uri): File {
+    val inputStream = context.contentResolver.openInputStream(uri)
+    val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
+    inputStream.use { input ->
+        tempFile.outputStream().use { output ->
+            input?.copyTo(output)
+        }
     }
+    return tempFile
 }
+
+//@Preview
+//@Composable
+//fun ProfileScreenSmallerPreview() {
+//    EzipayCoinTheme {
+//        MyProfile(rememberNavController() ,viewModel<MyProfileViewModel>())
+//    }
+//}

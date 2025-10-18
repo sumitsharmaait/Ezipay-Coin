@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.presentation.dashboard.wallet
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,19 +21,24 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,20 +53,30 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
+import com.app.ezipaycoin.navigation.Screen
 import com.app.ezipaycoin.presentation.shared.SharedEvent
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.ui.composables.AppGreyButton
 import com.app.ezipaycoin.ui.composables.AppTextField
 import com.app.ezipaycoin.ui.composables.ComingSoonAlert
+import com.app.ezipaycoin.ui.composables.ImageFromUrl
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.Gradient_1
 import com.app.ezipaycoin.ui.theme.Gradient_2
 import com.app.ezipaycoin.ui.theme.Gradient_3
 import com.app.ezipaycoin.ui.theme.Gradient_4
+import com.app.ezipaycoin.ui.theme.TextPrimaryColor
+import com.app.ezipaycoin.ui.theme.cardBorderColor
 import com.app.ezipaycoin.ui.theme.greyButtonBackground
+import com.app.ezipaycoin.ui.theme.grey_23
+import com.app.ezipaycoin.ui.theme.grey_9
 import com.app.ezipaycoin.ui.theme.receivedAmountTextColor
 import com.app.ezipaycoin.ui.theme.sendAmountTextColor
+import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletScreen(
     navController: NavController,
@@ -119,18 +135,11 @@ fun WalletScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                Image(
-                    painter = painterResource(
-                        id = when (sharedState.selectedCrypto?.symbol) {
-                            "EZPT" -> R.drawable.ic_ezipay_coin_small
-                            "BNB" -> R.drawable.ic_currency_top_bar
-                            "USDT" -> R.drawable.ic_usdt_icon
-                            else -> R.drawable.ic_ezipay_coin_small
-                        }
-                    ),
-                    contentDescription = "EPAY Logo",
-                    modifier = Modifier.size(36.dp)
+                ImageFromUrl(
+                    sharedState.selectedCrypto?.tokenLogo,
+                    Modifier.size(36.dp)
                 )
+
                 Spacer(modifier = Modifier.width(5.dp))
                 Text(
                     sharedState.selectedCrypto?.formattedBalance ?: "0.00",
@@ -227,7 +236,7 @@ fun WalletScreen(
                         .clip(MaterialTheme.shapes.medium)
                 ) {
                     crypt.forEachIndexed { index, token ->
-                        TokenRow(tokenInfo = token, index, snaps)
+                        TokenRow(tokenInfo = token, index, snaps, viewModel)
                         if (index < crypt.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 0.dp),
@@ -250,35 +259,198 @@ fun WalletScreen(
                 .fillMaxWidth()
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (state.showWithDrawalOrDepositeType) {
+            val sheetState =
+                rememberModalBottomSheetState(skipPartiallyExpanded = true) // Sheet fully expands or hides
+            val scope = rememberCoroutineScope()
+            ModalBottomSheet(
+                onDismissRequest = {
+                    viewModel.onEvent(
+                        WalletEvent.DismissWithdrawalDepositeBottomSheet(
+                            false,
+                        )
+                    )
+                },
+                sheetState = sheetState,
+                //shape = MaterialTheme.shapes.extraLarge, // Rounded top corners
+                containerColor = AppBackgroundColor, // Sheet background color
+                dragHandle = { // Standard drag handle
+                    BottomSheetDefaults.DragHandle(
+                        color = grey_9,
+                        width = 40.dp,
+                        height = 4.dp
+                    )
+                }
+            ) {
+                SecureWalletSheetContent(
+                    onGotItClick = { title ->
+                        scope.launch { sheetState.hide() }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                viewModel.onEvent(
+                                    WalletEvent.DismissWithdrawalDepositeBottomSheet(
+                                        false,
+                                    )
+                                )
+                                state.selectedTokenId?.let {
+                                    if (title == "On-chain deposit") {
+                                        navController.navigate(
+                                            Screen.AppNavScreens.Deposit(
+                                                token = Json.encodeToString(
+                                                    it
+                                                )
+                                            )
+                                        )
+                                    }else if (title == "P2P"){
+                                        navController.navigate(Screen.AppNavScreens.Pay)
+                                    } else {
+                                        navController.navigate(
+                                            Screen.AppNavScreens.Withdraw(
+                                                token = Json.encodeToString(
+                                                    it
+                                                )
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
     }
 
 }
 
+@Composable
+private fun SecureWalletSheetContent(onGotItClick: (title: String) -> Unit) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = 24.dp,
+                end = 24.dp,
+            ) // Top padding handled by drag handle space
+            .verticalScroll(rememberScrollState()), // In case content is long
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(8.dp)) // Space after drag handle
+
+        RowBottomSheet(
+            iconRes = R.drawable.ic_usdt_icon,
+            title = "On-chain deposit",
+            subTitle = "Sent coins to the recipient’s address via the blockchain networks",
+            onItemClick = {
+                onGotItClick(it)
+            }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        RowBottomSheet(
+            iconRes = R.drawable.ic_usdt_icon,
+            title = "On-chain withdrawal",
+            subTitle = "Sent coins to the recipient’s address via the blockchain networks",
+            onItemClick = {
+                onGotItClick(it)
+            }
+        )
+//        Spacer(modifier = Modifier.height(8.dp))
+//        RowBottomSheet(
+//            iconRes = R.drawable.ic_usdt_icon,
+//            title = "Internal Transfer",
+//            subTitle = "Send coins to a Ezipay coin wallet user by entering their email/wallet address",
+//            onItemClick = {
+//                onGotItClick(it)
+//            }
+//        )
+        Spacer(modifier = Modifier.height(8.dp))
+        RowBottomSheet(
+            iconRes = R.drawable.ic_usdt_icon,
+            title = "P2P",
+            subTitle = "Enjoy peer-to-peer transactions at competitive prices with local payments",
+            onItemClick = {
+                onGotItClick(it)
+            }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+    }
+}
+
+@Composable
+private fun RowBottomSheet(
+    @DrawableRes iconRes: Int,
+    title: String,
+    subTitle: String,
+    onItemClick: (title: String) -> Unit
+) {
+
+    OutlinedCard(
+        border = BorderStroke(width = 1.dp, color = cardBorderColor),
+        colors = CardDefaults.cardColors(containerColor = grey_23),
+        modifier = Modifier.fillMaxWidth(),
+        onClick = { onItemClick(title) }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Image(painterResource(iconRes), title, Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(
+                modifier = Modifier
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyLarge.copy(color = TextPrimaryColor)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    subTitle,
+                    style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor)
+                )
+            }
+
+        }
+
+    }
+
+}
 
 @Composable
 private fun TokenRow(
     tokenInfo: DashboardResponse.Crypto,
     index: Int,
-    marketSnapshot: List<DashboardResponse.MarketSnapshot>
+    marketSnapshot: List<DashboardResponse.MarketSnapshot>,
+    viewModel: WalletViewModel
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* TODO: Navigate to token details */ }
+            .clickable {
+                tokenInfo.tokenId?.let {
+                    viewModel.onEvent(
+                        WalletEvent.DismissWithdrawalDepositeBottomSheet(
+                            true, tokenInfo
+                        )
+                    )
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
 
-        Image(
-            painterResource(
-                id = when (tokenInfo.symbol) {
-                    "EZPT" -> R.drawable.ic_ezipay_coin_small
-                    "BNB" -> R.drawable.ic_currency_top_bar
-                    "USDT" -> R.drawable.ic_usdt_icon
-                    else -> R.drawable.ic_ezipay_coin_small
-                }
-            ), "Token", Modifier.size(24.dp)
+        ImageFromUrl(
+            tokenInfo.tokenLogo,
+            Modifier.size(24.dp)
         )
+
         Spacer(modifier = Modifier.width(12.dp))
 
         // Token Name

@@ -1,6 +1,5 @@
 package com.app.ezipaycoin.presentation.transactions
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.request.TransactionsRequest
@@ -67,8 +66,16 @@ class AllTransactionsViewModel(private val repository: TransactionsRepository) :
                                 canLoadMore = canLoadMore
                             )
                         }
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                responseState = ResponseState.Error(
+                                    "No Transactions Found!!"
+                                )
+                            )
+                        }
                     }
-                    Log.e("", "loadMoreTransactions: "+_uiState.value )
                 } else {
                     _uiState.update {
                         it.copy(

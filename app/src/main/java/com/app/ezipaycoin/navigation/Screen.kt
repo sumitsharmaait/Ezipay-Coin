@@ -36,6 +36,9 @@ sealed class Screen(val route: String) {
         data object SeedPhrase
 
         @Serializable
+        data object Unlock
+
+        @Serializable
         data class SeedPhraseVerify(
             val phrases: List<String>
         )
@@ -58,6 +61,19 @@ sealed class Screen(val route: String) {
 
         @Serializable
         data object TransactionDetails
+
+        @Serializable
+        data class Deposit(
+            val token: String
+        )
+
+        @Serializable
+        data class Withdraw(
+            val token: String
+        )
+
+        @Serializable
+        data object WalletDetails
 
     }
 

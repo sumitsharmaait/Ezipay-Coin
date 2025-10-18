@@ -2,12 +2,12 @@ package com.app.ezipaycoin.presentation.importfromseed
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.ezipaycoin.data.remote.dto.UserPreferences
+import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.domain.repository.AuthRepository
-import com.app.ezipaycoin.presentation.App
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.WalletManager
+import com.app.ezipaycoin.utils.WalletManager.signNonceWithTrustWalletCore
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,10 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import wallet.core.jni.CoinType
-import wallet.core.jni.Curve
 import wallet.core.jni.HDWallet
-import wallet.core.jni.Hash
-import wallet.core.jni.PrivateKey
 import java.security.InvalidParameterException
 
 class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewModel() {
@@ -27,13 +24,14 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
 
     private val _uiState = MutableStateFlow(ImportFromSeedState())
     val uiState: StateFlow<ImportFromSeedState> = _uiState.asStateFlow()
-
+    val dataStore = UserPreferencesRepository.userPreferencesFlow
 
     private val _eventFlow = MutableSharedFlow<ImportFromSeedVMEvent>(
         replay = 0,
         extraBufferCapacity = 1
     )
     val eventFlow = _eventFlow.asSharedFlow()
+
 
     fun onEvent(event: ImportFromSeedEvent) {
         when (event) {
@@ -68,8 +66,11 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
             }
 
             is ImportFromSeedEvent.SignInWithFaceIdChange -> {
+                updateBiometricEnabled(event.isFaceIdChange)
                 _uiState.update {
-                    it.copy(signInWithFaceId = event.isFaceIdChange)
+                    it.copy(
+                        signInWithFaceId = event.isFaceIdChange,
+                        bioMetricMessage = if (event.isFaceIdChange) "Biometric login enabled!" else "Authentication failed or cancelled")
                 }
             }
 
@@ -105,9 +106,8 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
                     val signatureHex = signNonceWithTrustWalletCore(res.apiData.nonce, privateKey)
                     val loginRes = repository.postLogin(LoginRequest(address, signatureHex, "2"))
                     if (loginRes.apiStatus) {
-                        val dataStore = App.getInstance().dataStore
                         dataStore.updateData {
-                            UserPreferences(
+                            it.copy(
                                 isWalletCreated = true,
                                 password = _uiState.value.newPassword,
                                 walletAddress = address,
@@ -200,21 +200,14 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
         return true
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun signNonceWithTrustWalletCore(nonce: String, privateKey: PrivateKey): String {
-
-        // Ethereum-style signed message prefix
-        val prefix = "\u0019Ethereum Signed Message:\n" + nonce.length
-        val prefixedMessage = prefix + nonce
-
-        // Hash the message using Keccak-256
-        val messageHash = Hash.keccak256(prefixedMessage.toByteArray())
-
-        // Sign the message hash
-        val signature = privateKey.sign(messageHash, Curve.SECP256K1)
-
-        // Return hex representation of the signature
-        return signature.toHexString()
+    private fun updateBiometricEnabled(faceIdChange: Boolean) {
+        viewModelScope.launch {
+            dataStore.updateData {
+                it.copy(
+                    bioMetricAuthEnabled = faceIdChange
+                )
+            }
+        }
     }
 
 }

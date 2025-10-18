@@ -5,6 +5,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Color
+import androidx.datastore.core.DataStore
+import androidx.datastore.dataStore
+import com.app.ezipaycoin.data.remote.dto.UserPreferences
+import com.app.ezipaycoin.data.remote.dto.UserPreferencesSerializer
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -46,3 +50,8 @@ fun Context.pasteFromClipboard(): String? {
         null
     }
 }
+
+val Context.userPreferencesDataStore: DataStore<UserPreferences> by dataStore(
+    fileName = "user-preferences",
+    serializer = UserPreferencesSerializer
+)

@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Ezipay Coin</string>
+    <string name="default_web_client_id">587436940198-6i9f8umke4direqpdpvlrjknu33ngul3.apps.googleusercontent.com</string>
+    <string name="facebook_app_id">833416492706197</string>
+    <string name="facebook_client_token">1070c365675c7a3b3779d888b5b0c176</string>
 </resources>

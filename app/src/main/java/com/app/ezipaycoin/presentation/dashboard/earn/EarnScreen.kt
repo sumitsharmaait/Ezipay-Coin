@@ -85,7 +85,7 @@ fun EarnScreen() {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.Top) {
                     Text(
-                        text = "1,056 EZP Token ",
+                        text = "0 EZP Token ",
                         style = MaterialTheme.typography.titleLarge.copy(
                             brush = Brush.linearGradient(
                                 colors = listOf(Gradient_1, Gradient_2, Gradient_3, Gradient_4)

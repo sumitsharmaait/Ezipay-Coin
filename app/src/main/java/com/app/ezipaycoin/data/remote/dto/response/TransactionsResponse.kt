@@ -1,15 +1,18 @@
 package com.app.ezipaycoin.data.remote.dto.response
 
+import kotlinx.serialization.Serializable
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@Serializable
 data class TransactionsResponse(
     val items: List<TransactionsItem>,
     val page: Int,
     val size: Int,
     val total: Int
 ) {
+    @Serializable
     data class TransactionsItem(
         val id: String,
         val chain: String,
@@ -20,7 +23,12 @@ data class TransactionsResponse(
         val timestamp: String,
         val status: String,
         val to: String,
-        val from: String
+        val from: String,
+        val nonce: String,
+        val gas: String,
+        val gasPrice: String,
+        val gasUsed: String,
+        val cumulativeGasUsed: String
     ) {
         val formattedAmount: String
             get() = String.format(Locale.US, "%.4f", amount)

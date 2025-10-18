@@ -8,15 +8,16 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.School
-import androidx.datastore.dataStore
-import com.app.ezipaycoin.data.remote.dto.UserPreferencesSerializer
+import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.ui.composables.BottomNavItem
+import com.google.firebase.FirebaseApp
 
 class App : Application() {
 
@@ -31,16 +32,11 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        FirebaseApp.initializeApp(this)
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         System.loadLibrary("TrustWalletCore")
+        UserPreferencesRepository.init(this)
     }
-
-    val dataStore by dataStore(
-        fileName = "user-preferences",
-        serializer = UserPreferencesSerializer
-    )
-
-
 
     val items = listOf(
         BottomNavItem(
@@ -74,11 +70,17 @@ class App : Application() {
         BottomNavItem(
             "Profile",
             Icons.Filled.Person,
-            Icons.Filled.Person),
+            Icons.Filled.Person
+        ),
         BottomNavItem(
             "Referrals & Rewards",
             Icons.Filled.WorkspacePremium,
             Icons.Filled.WorkspacePremium
+        ),
+        BottomNavItem(
+            "Transaction history",
+            Icons.Filled.Notifications,
+            Icons.Filled.Notifications
         )
     )
 

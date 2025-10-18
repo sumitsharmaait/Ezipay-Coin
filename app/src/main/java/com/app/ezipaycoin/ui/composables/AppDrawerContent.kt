@@ -2,7 +2,6 @@ package com.app.ezipaycoin.ui.composables
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,26 +21,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Article
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Facebook
-import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Message
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,7 +41,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,7 +52,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.app.ezipaycoin.R
@@ -211,32 +201,32 @@ fun AppDrawerContent(
                 selectedItem
             ) { label -> sharedViewModel.onOpenLinkClicked(label) }
 
-            SectionHeader("Settings")
-            DrawerListItem(
-                "Language",
-                Icons.Filled.Translate,
-                selectedItem
-            ) { label -> onItemSelected(label) }
-            DrawerListItem(
-                "Currency",
-                Icons.Filled.AttachMoney,
-                selectedItem
-            ) { label -> onItemSelected(label) }
-            DrawerListItem(
-                "Notifications",
-                Icons.Filled.Notifications,
-                selectedItem
-            ) { label -> onItemSelected(label) }
-            DrawerListItem(
-                "2FA & Biometrics",
-                Icons.Filled.Fingerprint,
-                selectedItem
-            ) { label -> onItemSelected(label) }
-            DrawerListItem(
-                "KYC Status",
-                Icons.Filled.CheckCircle,
-                selectedItem
-            ) { label -> onItemSelected(label) }
+//            SectionHeader("Settings")
+//            DrawerListItem(
+//                "Language",
+//                Icons.Filled.Translate,
+//                selectedItem
+//            ) { label -> onItemSelected(label) }
+//            DrawerListItem(
+//                "Currency",
+//                Icons.Filled.AttachMoney,
+//                selectedItem
+//            ) { label -> onItemSelected(label) }
+//            DrawerListItem(
+//                "Notifications",
+//                Icons.Filled.Notifications,
+//                selectedItem
+//            ) { label -> onItemSelected(label) }
+//            DrawerListItem(
+//                "2FA & Biometrics",
+//                Icons.Filled.Fingerprint,
+//                selectedItem
+//            ) { label -> onItemSelected(label) }
+//            DrawerListItem(
+//                "KYC Status",
+//                Icons.Filled.CheckCircle,
+//                selectedItem
+//            ) { label -> onItemSelected(label) }
 
             SectionHeader("Legal")
             DrawerListItem(
@@ -248,7 +238,7 @@ fun AppDrawerContent(
                 "Privacy Policy",
                 Icons.Filled.Shield,
                 selectedItem
-            ) { label -> onItemSelected(label) }
+            ) { label -> sharedViewModel.onOpenLinkClicked(label) }
 
             SectionHeader("Social")
             LazyVerticalGrid(
@@ -274,30 +264,30 @@ fun AppDrawerContent(
                 "Core Team",
                 Icons.Filled.Groups,
                 selectedItem
-            ) { label -> onItemSelected(label) }
+            ) { label -> sharedViewModel.onOpenLinkClicked("Core Team") }
 
             Spacer(modifier = Modifier.weight(1f)) // Push Sign Out to bottom
 
-            OutlinedButton(
-                onClick = { /*TODO*/ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp),
-                shape = RoundedCornerShape(28.dp),
-                border = BorderStroke(0.5.dp, TextPrimaryColor),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimaryColor)
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ExitToApp,
-                    "Sign Out",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Sign Out",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-                )
-            }
+//            OutlinedButton(
+//                onClick = { /*TODO*/ },
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(top = 24.dp),
+//                shape = RoundedCornerShape(28.dp),
+//                border = BorderStroke(0.5.dp, TextPrimaryColor),
+//                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimaryColor)
+//            ) {
+//                Icon(
+//                    Icons.AutoMirrored.Filled.ExitToApp,
+//                    "Sign Out",
+//                    modifier = Modifier.size(20.dp)
+//                )
+//                Spacer(modifier = Modifier.width(8.dp))
+//                Text(
+//                    "Sign Out",
+//                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+//                )
+//            }
         }
     }
 

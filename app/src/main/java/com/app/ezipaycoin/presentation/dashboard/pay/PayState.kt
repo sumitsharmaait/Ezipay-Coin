@@ -16,7 +16,8 @@ data class PayState(
     var selectedUtility: String = "Mobile Recharge",
     var responseState: ResponseState<BaseResponse<TransactionsResponse>> = ResponseState.Idle,
     var payMoneyResponse: ResponseState<String> = ResponseState.Idle,
-    var isDialogVisible: Boolean = false
+    var isDialogVisible: Boolean = false,
+    var isScanning: Boolean = false
     //var transactionCountResponse: ResponseState<String> = ResponseState.Loading,
 
 )

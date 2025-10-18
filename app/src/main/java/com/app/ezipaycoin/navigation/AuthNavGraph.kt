@@ -11,6 +11,10 @@ import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.repository.AuthRepoImpl
 import com.app.ezipaycoin.presentation.confirmseedphrase.ConfirmSeedPhraseScreen
 import com.app.ezipaycoin.presentation.confirmseedphrase.ConfirmSeedPhraseViewModel
+import com.app.ezipaycoin.presentation.createpassword.CreatePassword
+import com.app.ezipaycoin.presentation.createpassword.CreatePasswordViewModel
+import com.app.ezipaycoin.presentation.createwith.WalletSetUp
+import com.app.ezipaycoin.presentation.createwith.WalletSetupVM
 import com.app.ezipaycoin.presentation.importfromseed.ImportFromSeedScreen
 import com.app.ezipaycoin.presentation.importfromseed.ImportFromSeedViewModel
 import com.app.ezipaycoin.presentation.onboarding.OnboardingScreen
@@ -20,8 +24,6 @@ import com.app.ezipaycoin.presentation.seedphraseview.WriteDownSeedPhraseScreen
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.presentation.success.WalletSuccess
 import com.app.ezipaycoin.presentation.walletsetup.CreateNewWallet
-import com.app.ezipaycoin.presentation.walletsetup.CreatePassword
-import com.app.ezipaycoin.presentation.walletsetup.WalletSetUp
 import com.app.ezipaycoin.utils.ViewModelFactory
 
 
@@ -40,7 +42,12 @@ fun NavGraphBuilder.authNavGraph(
         }
 
         composable<Screen.Auth.WalletSetup> {
-            WalletSetUp(navController = navController)
+            val viewModel: WalletSetupVM = viewModel(
+                factory = ViewModelFactory {
+                    WalletSetupVM(repository)
+                }
+            )
+            WalletSetUp(navController = navController, viewModel)
         }
 
         composable<Screen.Auth.ImportFromSeed> {
@@ -53,7 +60,10 @@ fun NavGraphBuilder.authNavGraph(
         }
 
         composable<Screen.Auth.CreatePassword> {
-            CreatePassword(navController = navController)
+            CreatePassword(
+                navController = navController,
+                viewModel = viewModel<CreatePasswordViewModel>()
+            )
         }
 
         composable<Screen.Auth.CreateNewWallet> {
@@ -92,6 +102,15 @@ fun NavGraphBuilder.authNavGraph(
                 walletSharedViewModel = walletSharedViewModel
             )
         }
+
+//        composable<Screen.Auth.Unlock> {
+//            val unlockScreenVM: UnlockScreenVM = viewModel(
+//                factory = ViewModelFactory {
+//                    UnlockScreenVM(repository)
+//                }
+//            )
+//            UnlockScreen(unlockScreenVM)
+//        }
 
 
     }

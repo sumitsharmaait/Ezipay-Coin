@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavController
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.navigation.Screen
@@ -51,8 +53,11 @@ import com.app.ezipaycoin.ui.composables.FaceIdToggleRow
 import com.app.ezipaycoin.ui.composables.GoldGradientButton
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.GoldTextColor
+import com.app.ezipaycoin.ui.theme.OnboardingGold1
 import com.app.ezipaycoin.ui.theme.TextHintColor
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
+import com.app.ezipaycoin.utils.BiometricHelper
+import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.pasteFromClipboard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +70,7 @@ fun ImportFromSeedScreen(
     val state by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManger = LocalFocusManager.current
+    val canUseBiometric = BiometricHelper.canAuthenticate(context)
 
 
     LaunchedEffect(Unit) {
@@ -217,11 +223,45 @@ fun ImportFromSeedScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Sign in with Face ID
-            FaceIdToggleRow(
-                label = "Sign in with Face ID?",
-                checked = state.signInWithFaceId,
-                onCheckedChange = { viewModel.onEvent(ImportFromSeedEvent.SignInWithFaceIdChange(it)) }
-            )
+            if (canUseBiometric) {
+                FaceIdToggleRow(
+                    label = "Sign in with Face ID?",
+                    checked = state.signInWithFaceId,
+                    onCheckedChange = {
+                        if (it) {
+                            BiometricHelper.authenticate(
+                                context as FragmentActivity,
+                                title = "Confirm Fingerprint",
+                                subtitle = "Touch the sensor to enable biometric login",
+                                onSuccess = {
+                                    viewModel.onEvent(
+                                        ImportFromSeedEvent.SignInWithFaceIdChange(
+                                            true
+                                        )
+                                    )
+                                },
+                                onFailure = {
+                                    viewModel.onEvent(
+                                        ImportFromSeedEvent.SignInWithFaceIdChange(
+                                            false
+                                        )
+                                    )
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+
+            if (state.bioMetricMessage.isNotBlank()) {
+                Text(
+                    text = state.bioMetricMessage,
+                    style = MaterialTheme.typography.titleSmall.copy(color = OnboardingGold1),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, top = 4.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -229,6 +269,10 @@ fun ImportFromSeedScreen(
             TermsAndConditionsText()
 
             Spacer(modifier = Modifier.height(24.dp)) // Space before bottom button
+
+            if (state.responseState is ResponseState.Loading) {
+                CircularProgressIndicator(color = OnboardingGold1)
+            }
         }
     }
 }

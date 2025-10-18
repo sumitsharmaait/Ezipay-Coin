@@ -2,13 +2,14 @@ package com.app.ezipaycoin.presentation.dashboard.pay
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.BitPayRequest
 import com.app.ezipaycoin.data.remote.dto.request.EstimateGasRequest
 import com.app.ezipaycoin.data.remote.dto.request.TransactionsRequest
 import com.app.ezipaycoin.domain.repository.TransactionsRepository
-import com.app.ezipaycoin.presentation.App
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.WalletManager
+import com.app.ezipaycoin.utils.WalletManager.CHAIN_ID
 import com.google.protobuf.ByteString
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -92,6 +93,24 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
                     it.copy(payMoneyResponse = ResponseState.Idle)
                 }
             }
+
+            is PayEvent.QRSuccess -> {
+                _uiState.update {
+                    it.copy(isScanning = false, toAddress = event.qr)
+                }
+            }
+
+            is PayEvent.QRRetry -> {
+                _uiState.update {
+                    it.copy(isScanning = true)
+                }
+            }
+
+            is PayEvent.QRDispose -> {
+                _uiState.update {
+                    it.copy(isScanning = false)
+                }
+            }
         }
     }
 
@@ -99,7 +118,7 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
     @OptIn(ExperimentalStdlibApi::class)
     private fun processPayment(crypto: String) {
         viewModelScope.launch {
-            val prefs = App.getInstance().dataStore.data.first()
+            val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
             if (prefs.walletAddress == null || prefs.walletPrivateKey == null) {
                 return@launch
             }
@@ -373,7 +392,7 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
         )
 
         val input = Ethereum.SigningInput.newBuilder().apply {
-            this.chainId = ByteString.copyFrom(BigInteger.valueOf(97L).toByteArray())
+            this.chainId = ByteString.copyFrom(BigInteger.valueOf(CHAIN_ID).toByteArray())
             this.nonce =
                 ByteString.copyFrom(BigInteger(nonce.removePrefix("0x"), 16).toByteArray())
             this.gasPrice = BigInteger(gasPrice.removePrefix("0x"), 16).toByteString()
@@ -403,7 +422,7 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
         val wei =
             (BigDecimal(_uiState.value.amount) * BigDecimal("1000000000000000000")).toBigInteger()
         val amountBytes = wei.toByteArray()
-        val chainId = BigInteger.valueOf(97L).toByteArray()
+        val chainId = BigInteger.valueOf(CHAIN_ID).toByteArray()
         val input = Ethereum.SigningInput.newBuilder().apply {
             this.chainId = ByteString.copyFrom(chainId)
             this.nonce =
@@ -501,7 +520,6 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
     }
 
     private fun validateForm(): Boolean {
-        var isValid = true
         _uiState.update {
             _uiState.value.copy(amountError = null, toAddressError = null)
         }
@@ -509,17 +527,24 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
             _uiState.update {
                 _uiState.value.copy(toAddressError = "Please Enter Sender Address")
             }
-            isValid = false
+            return false
         }
 
         if (_uiState.value.amount.isBlank()) {
             _uiState.update {
                 _uiState.value.copy(amountError = "Please Enter Amount")
             }
-            isValid = false
+            return false
         }
 
-        return isValid
+        if (_uiState.value.amount.toDouble() <= 0) {
+            _uiState.update {
+                _uiState.value.copy(amountError = "Please Enter Valid Amount")
+            }
+            return false
+        }
+
+        return true
     }
 
 

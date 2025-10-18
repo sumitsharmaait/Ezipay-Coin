@@ -1,15 +1,16 @@
 package com.app.ezipaycoin.presentation.confirmseedphrase
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.ezipaycoin.data.remote.dto.UserPreferences
+import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.domain.repository.AuthRepository
-import com.app.ezipaycoin.presentation.App
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SnackbarController
 import com.app.ezipaycoin.utils.SnackbarEvent
 import com.app.ezipaycoin.utils.WalletManager
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -81,14 +82,22 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
                 )
             }
             try {
+                var token = ""
+                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        token = task.result
+                        Log.d("FCM", "Current token: $token")
+                    }
+                }
                 val res = repository.getNonce(publicKey)
                 if (res.apiStatus) {
                     val signatureHex = signNonceWithTrustWalletCore(res.apiData.nonce, privateKey)
-                    val loginRes = repository.postLogin(LoginRequest(publicKey, signatureHex, "2"))
+                    val loginRes =
+                        repository.postLogin(LoginRequest(publicKey, signatureHex, token))
                     if (loginRes.apiStatus) {
-                        val dataStore = App.getInstance().dataStore
+                        val dataStore = UserPreferencesRepository.userPreferencesFlow
                         dataStore.updateData {
-                            UserPreferences(
+                            it.copy(
                                 isWalletCreated = true,
                                 walletAddress = publicKey,
                                 walletPrivateKey = privateKey.data()
@@ -97,7 +106,8 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
                                 token = loginRes.apiData.token,
                                 userName = loginRes.apiData.user.name,
                                 userEmail = loginRes.apiData.user.email,
-                                userProfile = loginRes.apiData.user.profilePic
+                                userProfile = loginRes.apiData.user.profilePic,
+                                seedPhrase = originalSeeds.joinToString(separator = " ")
                             )
                         }
 

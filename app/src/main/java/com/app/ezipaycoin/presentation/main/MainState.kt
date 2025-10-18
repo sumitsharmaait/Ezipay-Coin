@@ -2,6 +2,7 @@ package com.app.ezipaycoin.presentation.main
 
 data class MainState(
     val isLoggedIn: Boolean = false,
+    val passwordCreated: Boolean = false,
     val selectedBottomBar: String = "Home",
     val dataLoaded: Boolean = false,
     val bottomBarRoutes: List<String> = listOf(
@@ -20,6 +21,9 @@ data class MainState(
         "Referrals & Rewards",
         "Receive",
         "Transactions",
-        "TransactionDetails"
+        "TransactionDetails",
+        "Deposit",
+        "Withdraw",
+        "WalletDetails"
     )
 )

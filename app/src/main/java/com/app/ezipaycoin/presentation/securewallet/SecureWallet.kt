@@ -382,7 +382,7 @@ fun SeedPhraseInfoSheetContent(onGotItClick: () -> Unit) {
 }
 
 @Composable
-fun SecureWalletSheetContent(onGotItClick: () -> Unit) {
+private fun SecureWalletSheetContent(onGotItClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()

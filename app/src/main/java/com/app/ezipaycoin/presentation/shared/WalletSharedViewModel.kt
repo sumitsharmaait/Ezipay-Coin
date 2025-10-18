@@ -2,9 +2,9 @@ package com.app.ezipaycoin.presentation.shared
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.domain.repository.HomeRepository
 import com.app.ezipaycoin.domain.repository.UserDataRepository
-import com.app.ezipaycoin.presentation.App
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,7 +36,18 @@ class WalletSharedViewModel(
                 }
             }
 
-            is SharedEvent.OpenUrl -> TODO()
+            is SharedEvent.AppUnlocked -> {
+                _uiState.update {
+                    it.copy(isUnlocked = true)
+                }
+                getDashboard()
+            }
+
+            is SharedEvent.OpenUrl -> {
+                viewModelScope.launch {
+                    _eventFlow.emit(SharedEvent.OpenUrl(event.url))
+                }
+            }
 
             is SharedEvent.TransactionSelected -> {
                 _uiState.update {
@@ -47,25 +58,27 @@ class WalletSharedViewModel(
     }
 
     init {
-        observeWalletState()
+        //observeWalletState()
     }
 
-    private fun observeWalletState() {
-        viewModelScope.launch {
-            dataRepository.isWalletCreate().collect { isCreated ->
-                if (isCreated) {
-                    _uiState.update {
-                        it.copy(isRegistered = isCreated)
-                    }
-                    getDashboard()
-                }
-            }
-        }
-    }
+//    private fun observeWalletState() {
+//        viewModelScope.launch {
+//            if (_uiState.value.isUnlocked){
+//                dataRepository.isAuthenticated().collect { isCreated ->
+//                    if (isCreated) {
+//                        _uiState.update {
+//                            it.copy(isUnlocked = true)
+//                        }
+//                        getDashboard()
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     private fun getDashboard() {
         viewModelScope.launch {
-            val prefs = App.getInstance().dataStore.data.first()
+            val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
             SessionManager.token = prefs.token
 
             _uiState.update {
@@ -121,11 +134,16 @@ class WalletSharedViewModel(
             "X" -> "https://x.com/EzipayCoin"
             "LinkedIn" -> "https://www.linkedin.com/company/ezipaycoin"
             "Instagram" -> "https://www.instagram.com/ezipaycoin/"
-            "YouTube" -> "https://www.ezipaycoin.com/"
+            "YouTube", "Tutorial & Video", "Defi Basic Goals", "Searching Best Content" -> "https://www.youtube.com/@Ezipay_Coin/"
             "Terms & Conditions" -> "https://www.ezipaycoin.com/terms"
+            "Support & Onboard" -> "https://www.ezipaycoin.com/contact"
             "FAQ & Troubleshoot", "FAQ & Help Center" -> "https://www.ezipaycoin.com/faq"
+            "Whitepaper & Tokenomics" -> "https://www.ezipaycoin.com/whitepaper"
             "Telegram" -> "https://t.me/ezipaycoin"
             "Discord" -> "https://discord.com/invite/MRpZmUJP"
+            "Privacy Policy" -> "https://ezipaycoin.notion.site/Ezipay-Coin-Wallet-Privacy-Policy-28f63db1841b8060a147dedeccbb5973"
+            "YouTube Intro" -> "https://www.youtube.com/shorts/t5Pv3InTBnU"
+            "YouTube Full" -> "https://vizay.in/video/Get-started.mp4"
             else -> "https://www.ezipaycoin.com/"
         }
         viewModelScope.launch {

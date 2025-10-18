@@ -1,7 +1,10 @@
 package com.app.ezipaycoin.data.remote.dto
 
+import android.content.Context
+import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
 import com.app.ezipaycoin.utils.Crypto
+import com.app.ezipaycoin.utils.userPreferencesDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -22,7 +25,9 @@ data class UserPreferences(
     val userName: String? = null,
     val userEmail: String? = null,
     val userProfile: String? = null,
-    val seedPhrase : String? = null
+    val seedPhrase: String? = null,
+    val bioMetricAuthEnabled: Boolean = false,
+    val isWalletReadyForAuth: Boolean = false,
 )
 
 
@@ -55,4 +60,22 @@ object UserPreferencesSerializer : Serializer<UserPreferences> {
             }
         }
     }
+}
+
+object UserPreferencesRepository {
+
+    // initialized once with Application Context
+    private lateinit var appContext: Context
+
+    fun init(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    private val dataStore: DataStore<UserPreferences> by lazy {
+        appContext.userPreferencesDataStore
+    }
+
+    val userPreferencesFlow: DataStore<UserPreferences>
+        get() = dataStore
+
 }

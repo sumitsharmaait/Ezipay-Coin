@@ -20,4 +20,18 @@ class UserDataRepoImpl(private val dataStore: DataStore<UserPreferences>) : User
             it.isWalletCreated
         }.distinctUntilChanged()
     }
+
+    override suspend fun setIsWalletReadyForAuth(ready: Boolean) {
+        dataStore.updateData {
+            it.copy(isWalletReadyForAuth = ready)
+        }
+    }
+
+    override suspend fun isWalletReadyForAuth(): Flow<Boolean> {
+        return dataStore.data.map {
+            it.isWalletReadyForAuth
+        }.distinctUntilChanged()
+    }
+
+
 }

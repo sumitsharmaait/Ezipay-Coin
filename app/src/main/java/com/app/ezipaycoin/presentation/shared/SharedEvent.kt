@@ -8,4 +8,6 @@ sealed class SharedEvent {
     data object FetchBalance : SharedEvent()
     data class CryptoOptionChanged(val crypto: DashboardResponse.Crypto) : SharedEvent()
     data class TransactionSelected(val transaction: TransactionsResponse.TransactionsItem) : SharedEvent()
+
+    data object AppUnlocked : SharedEvent()
 }

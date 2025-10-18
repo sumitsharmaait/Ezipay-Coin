@@ -19,3 +19,29 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep Kotlinx Serialization classes
+-keep class kotlinx.serialization.** { *; }
+-keep class kotlinx.serialization.json.** { *; }
+
+# Keep your model serializers
+-keepclassmembers class **$$serializer { *; }
+-keep class **$$serializer { *; }
+
+# Keep generated companion objects for serialization
+-keepclassmembers class * {
+    static ** Companion;
+}
+-keepclasseswithmembers class * {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+-keep class com.app.ezipaycoin.data.remote.dto.** { *; }
+
+# Keep all Wallet Core JNI bindings
+-keep class wallet.core.jni.** { *; }
+
+# Keep native method names
+-keepclasseswithmembernames class * {
+    native <methods>;
+}

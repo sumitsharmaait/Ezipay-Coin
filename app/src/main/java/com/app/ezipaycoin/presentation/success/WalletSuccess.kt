@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.navigation.Screen
+import com.app.ezipaycoin.presentation.shared.SharedEvent
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.ui.composables.GoldGradientButton
 import com.app.ezipaycoin.ui.composables.GradientText
@@ -55,6 +56,7 @@ fun WalletSuccess(
                 GoldGradientButton(
                     "Next",
                     onClick = {
+                        walletSharedViewModel.onEvent(SharedEvent.AppUnlocked)
                         navController.navigate(Screen.BottomNavScreens) {
                             popUpTo(Screen.Auth) {
                                 inclusive = true

@@ -55,7 +55,7 @@ import com.app.ezipaycoin.utils.shortenAddress
 @Composable
 fun TransactionDetailsScreen(
     item: TransactionsResponse.TransactionsItem,
-    onExplorerClick: () -> Unit
+    onExplorerClick: (id: String) -> Unit
 ) {
 
     Column(
@@ -211,7 +211,7 @@ fun TransactionDetailsScreen(
 
         GoldGradientButton(
             label = "View on Blockchain Explorer",
-            onClick = onExplorerClick,
+            onClick = { onExplorerClick(item.id) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -224,7 +224,7 @@ private fun InformationSection(item: TransactionsResponse.TransactionsItem) {
     var showTooltip by remember { mutableStateOf(false) }
 
     Column {
-        InfoRow(label = "Nonce", value = "193")
+        InfoRow(label = "Nonce", value = item.nonce)
         InfoRow(
             label = "Transaction ID",
             value = item.id.shortenAddress(),
@@ -238,7 +238,7 @@ private fun InformationSection(item: TransactionsResponse.TransactionsItem) {
         Box {
             InfoRow(
                 label = "Total Gas Fee",
-                value = "0.000021 BNB",
+                value = item.cumulativeGasUsed,
                 trailingIcon = {
                     IconButton(onClick = { showTooltip = true }, modifier = Modifier.size(20.dp)) {
                         Icon(Icons.AutoMirrored.Filled.HelpOutline, "Info", tint = GoldAccentColor)
@@ -262,7 +262,7 @@ private fun InformationSection(item: TransactionsResponse.TransactionsItem) {
                             horizontalArrangement = Arrangement.End
                         ) {
                             Text(
-                                text = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum is simply dummy text.",
+                                text = "gas: ${item.gas}\ngasPrice: ${item.gasPrice}\ngasUsed: ${item.gasUsed}",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = TextPrimaryColor,
                                 modifier = Modifier.weight(1f)

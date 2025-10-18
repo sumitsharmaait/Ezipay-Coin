@@ -192,7 +192,7 @@ fun CoveredSeedPhraseView(onViewClick: () -> Unit) {
 }
 
 @Composable
-fun RevealedSeedPhraseView(seedWords: List<String>) {
+private fun RevealedSeedPhraseView(seedWords: List<String>) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         modifier = Modifier

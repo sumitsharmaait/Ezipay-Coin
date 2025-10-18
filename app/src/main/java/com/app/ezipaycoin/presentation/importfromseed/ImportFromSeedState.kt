@@ -14,5 +14,6 @@ data class ImportFromSeedState(
     var seedPhraseError: String = "",
     var newPasswordError: String = "",
     var confirmPasswordError: String = "",
+    var bioMetricMessage: String = "",
     var responseState: ResponseState<BaseResponse<NonceResponse>> = ResponseState.Idle
 )

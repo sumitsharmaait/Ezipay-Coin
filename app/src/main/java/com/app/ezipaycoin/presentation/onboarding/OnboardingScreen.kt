@@ -132,7 +132,7 @@ fun OnboardingScreen(navController: NavController) {
                 )
             } else {
                 AppGreyButton(
-                    labelColor = Color.White, label = "Get Start", onClick = {
+                    labelColor = Color.White, label = "Next", onClick = {
                         if (pagerState.currentPage < pages.size - 1) {
                             scope.launch {
                                 pagerState.animateScrollToPage(pagerState.currentPage + 1)

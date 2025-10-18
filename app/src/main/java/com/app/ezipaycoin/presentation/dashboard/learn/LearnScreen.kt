@@ -139,7 +139,7 @@ fun LearnScreen(
             AppGreyButton(
                 labelColor = TextPrimaryColor,
                 label = "Start Now",
-                onClick = { /* TODO: Start Now */ },
+                onClick = { walletSharedViewModel.onOpenLinkClicked("YouTube Intro") },
                 modifier = Modifier
                     .fillMaxWidth()
             )
@@ -154,7 +154,9 @@ fun LearnScreen(
             subtitle = "Step by Step spacing guide"
         )
         Spacer(modifier = Modifier.height(24.dp))
-        NewTutorialCard()
+        NewTutorialCard(watchNowClick = {
+            walletSharedViewModel.onOpenLinkClicked("YouTube Full")
+        })
         Spacer(modifier = Modifier.height(24.dp))
 
         Row(
@@ -177,7 +179,7 @@ fun LearnScreen(
                 modifier = Modifier.weight(1f),
                 border = BorderStroke(width = 1.dp, color = Color.Blue),
                 shape = RoundedCornerShape(8.dp),
-                onClick = { /*TODO*/ }) {
+                onClick = { walletSharedViewModel.onOpenLinkClicked("Privacy Policy") }) {
                 Text(
                     text = "Privacy Policy",
                     style = MaterialTheme.typography.titleSmall.copy(color = blueColor)
@@ -199,10 +201,10 @@ fun LearnScreen(
 fun LearnTopicsGrid(viewModel: WalletSharedViewModel) {
     val topics = listOf(
         LearnGridItem("Tutorial & Video", R.drawable.tutorial_video),
-        LearnGridItem("White Paper & Ideomics", R.drawable.whitepaper_ideomics),
+        LearnGridItem("Whitepaper & Tokenomics", R.drawable.whitepaper_ideomics),
         LearnGridItem("Defi Basic Goals", R.drawable.basic_goals),
         LearnGridItem("FAQ & Troubleshoot", R.drawable.faq_troubleshoot),
-        LearnGridItem("Searching Best Protees", R.drawable.searching_best_protees),
+        LearnGridItem("Searching Best Content", R.drawable.searching_best_protees),
         LearnGridItem("Support & Onboard", R.drawable.support_onboard)
     )
 
@@ -334,7 +336,7 @@ fun FeaturedTopicCard(title: String, subtitle: String) {
 }
 
 @Composable
-fun NewTutorialCard() {
+fun NewTutorialCard(watchNowClick: () -> Unit) {
     Column(
         modifier = Modifier
             .border(
@@ -353,7 +355,7 @@ fun NewTutorialCard() {
         AppGreyButton(
             labelColor = TextPrimaryColor,
             label = "Watch Now",
-            onClick = { /* TODO: Watch Now */ },
+            onClick = { watchNowClick() },
             modifier = Modifier
                 .fillMaxWidth(),
         )

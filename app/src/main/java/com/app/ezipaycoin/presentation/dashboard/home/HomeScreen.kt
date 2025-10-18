@@ -3,7 +3,6 @@ package com.app.ezipaycoin.presentation.dashboard.home
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,13 +52,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import com.app.ezipaycoin.R
 import com.app.ezipaycoin.data.remote.dto.QuickAction
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
 import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
@@ -70,6 +67,7 @@ import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.ui.composables.AppGreyButton
 import com.app.ezipaycoin.ui.composables.Dialogue
 import com.app.ezipaycoin.ui.composables.GoldGradientButton
+import com.app.ezipaycoin.ui.composables.ImageFromUrl
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.Gradient_1
 import com.app.ezipaycoin.ui.theme.Gradient_2
@@ -163,17 +161,10 @@ private fun HomeSuccessData(
                 )
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(
-                            id = when (sharedState.selectedCrypto?.symbol) {
-                                "EZPT" -> R.drawable.ic_ezipay_coin_small
-                                "BNB" -> R.drawable.ic_currency_top_bar
-                                "USDT" -> R.drawable.ic_usdt_icon
-                                else -> R.drawable.ic_ezipay_coin_small
-                            }
-                        ),
-                        contentDescription = "EPAY Logo",
-                        modifier = Modifier.size(20.dp)
+
+                    ImageFromUrl(
+                        sharedState.selectedCrypto?.tokenLogo,
+                        Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(

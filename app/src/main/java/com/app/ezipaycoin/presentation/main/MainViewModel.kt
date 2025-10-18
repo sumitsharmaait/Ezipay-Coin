@@ -3,10 +3,11 @@ package com.app.ezipaycoin.presentation.main
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.ezipaycoin.presentation.App
+import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MainViewModel : ViewModel() {
@@ -20,7 +21,7 @@ class MainViewModel : ViewModel() {
     init {
         viewModelScope.launch {
            // delay(1000)
-            val prefs = App.getInstance().dataStore.data.first()
+            val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
             val isWalletCreated = prefs.isWalletCreated
           //  SessionManager.token = prefs.token
             isLoading.value = false
@@ -28,6 +29,11 @@ class MainViewModel : ViewModel() {
                 isLoggedIn = isWalletCreated,
                 dataLoaded = true
             )
+            prefs.password?.let {
+                _uiState.update {
+                    it.copy(passwordCreated = true)
+                }
+            }
         }
     }
 

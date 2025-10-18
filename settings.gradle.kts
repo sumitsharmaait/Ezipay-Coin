@@ -21,7 +21,7 @@ dependencyResolutionManagement {
             url = uri("https://maven.pkg.github.com/trustwallet/wallet-core")
             credentials {
                 username = "ait_lalit"
-                password = "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"
+                password = "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"
             }
         }
     }

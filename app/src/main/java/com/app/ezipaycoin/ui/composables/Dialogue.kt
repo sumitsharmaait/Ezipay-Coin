@@ -98,6 +98,7 @@ fun Dialogue(isError: Boolean, msg: String, onDismissRequest: () -> Unit) {
                 GoldGradientButton(
                     label = "Done",
                     onClick = {
+
                         onDismissRequest()
                     },
                     modifier = Modifier.fillMaxWidth(0.7f)

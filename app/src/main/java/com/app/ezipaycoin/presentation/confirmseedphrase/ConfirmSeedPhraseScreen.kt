@@ -91,7 +91,9 @@ fun ConfirmSeedPhraseScreen(
                 GoldGradientButton(
                     "Next",
                     onClick = {
-                        navController.navigate(Screen.Auth.WalletSuccess)
+                        if (state.responseState is ResponseState.Success) {
+                            navController.navigate(Screen.Auth.WalletSuccess)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -206,14 +208,12 @@ fun ConfirmSeedPhraseScreen(
                 } else {
                     if (state.responseState is ResponseState.Loading) {
                         CircularProgressIndicator(color = OnboardingGold1)
-                    }
-                    else if (state.responseState is ResponseState.Success) {
+                    } else if (state.responseState is ResponseState.Success) {
                         Text(
                             "Ready to proceed!",
                             style = MaterialTheme.typography.bodyLarge.copy(color = TextPrimaryColor)
                         )
-                    }
-                    else if (state.responseState is ResponseState.Error) {
+                    } else if (state.responseState is ResponseState.Error) {
                         Text(
                             "Error: ${(state.responseState as ResponseState.Error).message}",
                             color = Color.Red

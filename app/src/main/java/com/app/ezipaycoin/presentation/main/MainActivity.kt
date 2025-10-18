@@ -1,7 +1,6 @@
 package com.app.ezipaycoin.presentation.main
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
@@ -30,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -37,12 +37,18 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.app.ezipaycoin.data.remote.api.ApiClient
 import com.app.ezipaycoin.data.remote.api.ApiService
+import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
+import com.app.ezipaycoin.data.repository.AuthRepoImpl
 import com.app.ezipaycoin.data.repository.HomeRepoImpl
 import com.app.ezipaycoin.data.repository.UserDataRepoImpl
+import com.app.ezipaycoin.fcm.RequestNotificationPermissionOnce
 import com.app.ezipaycoin.navigation.Navigation
 import com.app.ezipaycoin.navigation.Screen
 import com.app.ezipaycoin.presentation.App
+import com.app.ezipaycoin.presentation.shared.SharedEvent
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
+import com.app.ezipaycoin.presentation.unlock.UnlockScreen
+import com.app.ezipaycoin.presentation.unlock.UnlockScreenVM
 import com.app.ezipaycoin.ui.composables.AppDrawerContent
 import com.app.ezipaycoin.ui.composables.BottomNavigationBar
 import com.app.ezipaycoin.ui.composables.DashboardTopBar
@@ -51,7 +57,7 @@ import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
 import com.app.ezipaycoin.utils.ViewModelFactory
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     private lateinit var navController: NavHostController
@@ -65,53 +71,71 @@ class MainActivity : ComponentActivity() {
             this,
             ViewModelFactory {
                 val repository = HomeRepoImpl(apiService)
-                val dataRepo = UserDataRepoImpl(App.getInstance().dataStore)
+                val dataRepo = UserDataRepoImpl(UserPreferencesRepository.userPreferencesFlow)
                 WalletSharedViewModel(repository, dataRepo)
             }
         )[WalletSharedViewModel::class.java]
+
+        val unlockScreenVM = ViewModelProvider(
+            this,
+            ViewModelFactory {
+                val repository = AuthRepoImpl(apiService)
+                UnlockScreenVM(repository)
+            }
+        )[UnlockScreenVM::class.java]
+
 
         val bottomNavItems = App.getInstance().items
         val navigationDrawerItems = bottomNavItems + App.getInstance().navigationItems
 
         setContent {
-            EzipayCoinTheme {
-                val state by viewModel.uiState.collectAsState()
+            RequestNotificationPermissionOnce()
+            val sharedState by walletSharedViewModel.uiState.collectAsState()
+            val state by viewModel.uiState.collectAsState()
+            if (!sharedState.isUnlocked && state.passwordCreated) {
+                UnlockScreen(
+                    onUnlocked = { walletSharedViewModel.onEvent(SharedEvent.AppUnlocked) },
+                    viewModel = unlockScreenVM
+                )
+            } else {
+                EzipayCoinTheme {
 
-                val sharedState by walletSharedViewModel.uiState.collectAsState()
+                    navController = rememberNavController()
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentRoute =
+                        navBackStackEntry?.destination?.route?.substringAfterLast('.')
+                            ?.substringBefore('/')
+                    val showBottomBar =
+                        if (currentRoute == null) true else currentRoute in state.bottomBarRoutes
+                    val showTopBar =
+                        if (currentRoute == null) true else currentRoute in state.topBarRoutes
 
-                navController = rememberNavController()
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route?.substringAfterLast('.')
-                val showBottomBar =
-                    if (currentRoute == null) true else currentRoute in state.bottomBarRoutes
-                val showTopBar =
-                    if (currentRoute == null) true else currentRoute in state.topBarRoutes
+                    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+                    val scope = rememberCoroutineScope()
+                    var selectedItem by remember { mutableStateOf("Home") }
+                    if (currentRoute != null) {
+                        selectedItem = currentRoute
+                    }
 
-                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-                val scope = rememberCoroutineScope()
-                var selectedItem by remember { mutableStateOf("Home") }
-                if (currentRoute != null) {
-                    selectedItem = currentRoute
-                }
-                if (!state.dataLoaded) {
-                    // Show splash or loading screen instead
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                    if (!state.dataLoaded) {
+                        // Show splash or loading screen instead
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
 //                        Image(
 //                            painter = painterResource(id = R.drawable.splash_background_image),
 //                            contentDescription = "Ezipay Splash Screen Graphic", // Descriptive text for accessibility
 //                            modifier = Modifier.fillMaxSize(), // Make the image fill the Box
 //                            contentScale = ContentScale.Fit
 //                        )
-                    }
-                } else {
-                    ModalNavigationDrawer(
-                        drawerState = drawerState,
-                        drawerContent = {
-                            if (sharedState.isRegistered) {
+                        }
+                    } else {
+                        ModalNavigationDrawer(
+                            drawerState = drawerState,
+                            drawerContent = {
+                                //if (sharedState.isRegistered) {
                                 AppDrawerContent(
                                     walletSharedViewModel,
                                     selectedItem = selectedItem,
@@ -130,6 +154,7 @@ class MainActivity : ComponentActivity() {
                                             "Learn" -> Screen.BottomNavScreens.Learn
                                             "Pay" -> Screen.AppNavScreens.Pay
                                             "Profile" -> Screen.AppNavScreens.MyProfile
+                                            "Transaction history" -> Screen.AppNavScreens.Transactions
                                             else -> {
                                                 Screen.BottomNavScreens.Home
                                             }
@@ -150,87 +175,90 @@ class MainActivity : ComponentActivity() {
                                     navigationDrawerItems
                                 )
                             }
-
-                        }
-                    ) {
-                        Scaffold(
-                            modifier = Modifier.systemBarsPadding(),
-                            containerColor = AppBackgroundColor,
-                            contentWindowInsets = WindowInsets.safeDrawing,
-                            topBar = {
-                                if (showTopBar) {
-                                    DashboardTopBar(
-                                        showBottomBar,
-                                        currentRoute,
-                                        onAccountClicked = {
-                                            navController.navigate(Screen.AppNavScreens.MyProfile)
-                                        },
-                                        onMenuClicked = {
-                                            scope.launch { drawerState.open() }
-                                        },
-                                        onBackClicked = {
-                                            onBackPressedDispatcher.onBackPressed()
-                                        })
-                                }
-                            },
-                            bottomBar = {
-                                if (showBottomBar) {
-                                    BottomNavigationBar(
-                                        selectedItem,
-                                        onItemSelected = {
-                                            selectedItem = it
-                                            val route: Any = when (it) {
-                                                "Home" -> Screen.BottomNavScreens.Home
-                                                "Wallet" -> Screen.BottomNavScreens.Wallet
-                                                "Earn" -> Screen.BottomNavScreens.Earn
-                                                "Learn" -> Screen.BottomNavScreens.Learn
-                                                "Pay" -> Screen.AppNavScreens.Pay
-                                                else -> {
-                                                    Screen.BottomNavScreens.Home
+                            // }
+                        ) {
+                            Scaffold(
+                                modifier = Modifier.systemBarsPadding(),
+                                containerColor = AppBackgroundColor,
+                                contentWindowInsets = WindowInsets.safeDrawing,
+                                topBar = {
+                                    if (showTopBar) {
+                                        DashboardTopBar(
+                                            showBottomBar,
+                                            currentRoute,
+                                            onAccountClicked = {
+                                                navController.navigate(Screen.AppNavScreens.MyProfile)
+                                            },
+                                            onMenuClicked = {
+                                                scope.launch { drawerState.open() }
+                                            },
+                                            onBackClicked = {
+                                                onBackPressedDispatcher.onBackPressed()
+                                            },
+                                            onNotificationClicked = {
+                                                navController.navigate(Screen.AppNavScreens.Transactions)
+                                            })
+                                    }
+                                },
+                                bottomBar = {
+                                    if (showBottomBar) {
+                                        BottomNavigationBar(
+                                            selectedItem,
+                                            onItemSelected = {
+                                                selectedItem = it
+                                                val route: Any = when (it) {
+                                                    "Home" -> Screen.BottomNavScreens.Home
+                                                    "Wallet" -> Screen.BottomNavScreens.Wallet
+                                                    "Earn" -> Screen.BottomNavScreens.Earn
+                                                    "Learn" -> Screen.BottomNavScreens.Learn
+                                                    "Pay" -> Screen.AppNavScreens.Pay
+                                                    else -> {
+                                                        Screen.BottomNavScreens.Home
+                                                    }
                                                 }
-                                            }
-                                            navController.navigate(route) {
-                                                popUpTo(navController.graph.findStartDestination().id) {
-                                                    saveState = true
+                                                navController.navigate(route) {
+                                                    popUpTo(navController.graph.findStartDestination().id) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
                                                 }
-                                                launchSingleTop = true
-                                                restoreState = true
-                                            }
 
-                                        }, bottomNavItems
-                                    )
-                                }
-                            },
-                        ) { paddingValues ->
-                            Box(
-                                modifier = Modifier
-                                    .background(color = AppBackgroundColor)
-                                    .padding(
-                                        PaddingValues(
-                                            start = paddingValues.calculateStartPadding(
-                                                LayoutDirection.Ltr
-                                            ),
-                                            top = paddingValues.calculateTopPadding(),
-                                            end = paddingValues.calculateEndPadding(LayoutDirection.Ltr),
-                                            bottom = if (paddingValues.calculateBottomPadding() > 40.dp) paddingValues.calculateBottomPadding() - 30.dp else paddingValues.calculateBottomPadding() // 👈 reduce or remove bottom padding
+                                            }, bottomNavItems
                                         )
+                                    }
+                                },
+                            ) { paddingValues ->
+                                Box(
+                                    modifier = Modifier
+                                        .background(color = AppBackgroundColor)
+                                        .padding(
+                                            PaddingValues(
+                                                start = paddingValues.calculateStartPadding(
+                                                    LayoutDirection.Ltr
+                                                ),
+                                                top = paddingValues.calculateTopPadding(),
+                                                end = paddingValues.calculateEndPadding(
+                                                    LayoutDirection.Ltr
+                                                ),
+                                                bottom = if (paddingValues.calculateBottomPadding() > 40.dp) paddingValues.calculateBottomPadding() - 20.dp else paddingValues.calculateBottomPadding() // 👈 reduce or remove bottom padding
+                                            )
+                                        )
+                                ) {
+                                    // Root NavHost
+                                    Navigation(
+                                        state.isLoggedIn,
+                                        navHostController = navController,
+                                        apiService,
+                                        walletSharedViewModel
                                     )
-                            ) {
-                                // Root NavHost
-
-                                Navigation(
-                                    state.isLoggedIn,
-                                    navHostController = navController,
-                                    apiService,
-                                    walletSharedViewModel
-                                )
-
+                                }
                             }
                         }
                     }
+
+
                 }
-
-
             }
         }
     }

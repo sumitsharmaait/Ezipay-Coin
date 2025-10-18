@@ -2,6 +2,8 @@ package com.app.ezipaycoin.data.remote.dto
 
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
+import kotlinx.serialization.Serializable
+
 
 data class OnboardingPage(
     @DrawableRes val imageRes: Int,

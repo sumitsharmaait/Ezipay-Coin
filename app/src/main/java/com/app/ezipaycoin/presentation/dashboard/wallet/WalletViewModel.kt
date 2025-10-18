@@ -33,6 +33,16 @@ class WalletViewModel(private val repository: HomeRepository) : ViewModel() {
                     )
                 }
             }
+
+            is WalletEvent.DismissWithdrawalDepositeBottomSheet -> {
+                _uiState.update {
+                    it.copy(
+                        showWithDrawalOrDepositeType = event.isVisible,
+                        selectedTokenId = event.selectedToken ?: it.selectedTokenId
+                    )
+                }
+            }
+
         }
     }
 

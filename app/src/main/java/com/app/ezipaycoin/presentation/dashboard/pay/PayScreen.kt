@@ -1,5 +1,8 @@
 package com.app.ezipaycoin.presentation.dashboard.pay
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,6 +40,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.PersonOutline
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.Flight
 import androidx.compose.material.icons.outlined.Hotel
@@ -85,6 +89,9 @@ import com.app.ezipaycoin.presentation.shared.SharedState
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.ui.composables.AppTextField
 import com.app.ezipaycoin.ui.composables.Dialogue
+import com.app.ezipaycoin.ui.composables.ImageFromUrl
+import com.app.ezipaycoin.ui.composables.LaserLineEffect
+import com.app.ezipaycoin.ui.composables.QrCodeScanner
 import com.app.ezipaycoin.ui.theme.GoldAccentColor
 import com.app.ezipaycoin.ui.theme.Gradient_1
 import com.app.ezipaycoin.ui.theme.Gradient_2
@@ -221,7 +228,15 @@ private fun DirectPayContent(
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item { ScanQrSection() }
+        item {
+            ScanQrSection(state, onSuccess = {
+                vm.onEvent(PayEvent.QRSuccess(it))
+            }, onRetry = {
+                vm.onEvent(PayEvent.QRRetry)
+            }, onDispose = {
+                vm.onEvent(PayEvent.QRDispose)
+            })
+        }
         item { Spacer(modifier = Modifier.height(20.dp)) }
         item {
             AppTextField(
@@ -271,7 +286,12 @@ private fun DirectPayContent(
 }
 
 @Composable
-private fun ScanQrSection() {
+private fun ScanQrSection(
+    state: PayState,
+    onSuccess: (result: String) -> Unit,
+    onRetry: () -> Unit,
+    onDispose: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .height(180.dp)
@@ -282,17 +302,40 @@ private fun ScanQrSection() {
             .clickable { /* TODO: Open QR Scanner */ },
         contentAlignment = Alignment.Center,
     ) {
-        Text("Scan QR", style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
+
+        if (state.isScanning) {
+            QrCodeScanner(
+                modifier = Modifier.matchParentSize(),
+                isScanning = state.isScanning,
+                onResult = {
+                    onSuccess(it)
+                },
+                onDispose = {
+                    onDispose()
+                }
+            )
+            LaserLineEffect()
+        }
+        AnimatedVisibility(
+            visible = !state.isScanning,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomEnd)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "Retry",
+                tint = Color.White,
+                modifier = Modifier
+                    .padding(10.dp)
+                    .size(28.dp)
+                    .clickable { onRetry() }
+            )
+        }
     }
+
 }
 
-data class Payee(
-    val initials: String,
-    val name: String,
-    val date: String,
-    val amount: String,
-    val isPositive: Boolean
-)
 
 @Composable
 private fun RecentPayeesSection(
@@ -408,7 +451,11 @@ fun RecentPayeeItem(item: TransactionsResponse.TransactionsItem) {
             Text(
                 item.formattedDate,
                 modifier = Modifier.padding(top = 4.dp),
-                style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor.copy(alpha = 0.5f))
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = TextPrimaryColor.copy(
+                        alpha = 0.5f
+                    )
+                )
             )
         }
         Text(
@@ -570,15 +617,9 @@ private fun PaymentDetailsSection(
                 .padding(start = 8.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(
-                painterResource(
-                    id = when (sharedState.selectedCrypto?.symbol) {
-                        "EZPT" -> R.drawable.ic_ezipay_coin_small
-                        "BNB" -> R.drawable.ic_currency_top_bar
-                        "USDT" -> R.drawable.ic_usdt_icon
-                        else -> R.drawable.ic_ezipay_coin_small
-                    }
-                ), "Token", Modifier.size(24.dp)
+            ImageFromUrl(
+                sharedState.selectedCrypto?.tokenLogo,
+                Modifier.size(24.dp)
             )
             Spacer(Modifier.width(8.dp))
             Text(
@@ -737,6 +778,7 @@ private fun SlideToPayButtonSection(
                     color = OnboardingGold1,
                     modifier = Modifier
                         .padding(end = 8.dp)
+                        .size(24.dp)
                         .align(Alignment.CenterEnd)
                 )
             }
@@ -803,7 +845,7 @@ private fun SlideToPayButtonSection(
                     },
                     onDragStopped = {
                         if (offsetX > 450f) {
-                            if (state.selectedTab == PayScreenTab.DirectPay) {
+                            if (state.payMoneyResponse !== ResponseState.Loading && state.selectedTab == PayScreenTab.DirectPay) {
                                 sharedState.selectedCrypto?.symbol?.let {
                                     vm.onEvent(PayEvent.PayAmount(it))
                                 }
@@ -821,7 +863,11 @@ private fun SlideToPayButtonSection(
                     "Pay",
                     style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
                 )
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Slide", tint = TextPrimaryColor)
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    "Slide",
+                    tint = TextPrimaryColor
+                )
             }
         }
     }

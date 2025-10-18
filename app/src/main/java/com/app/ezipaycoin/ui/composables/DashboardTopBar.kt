@@ -40,6 +40,7 @@ fun DashboardTopBar(
     isBackIcon: Boolean,
     currentRoute: String?,
     onAccountClicked: () -> Unit,
+    onNotificationClicked: () -> Unit,
     onMenuClicked: () -> Unit,
     onBackClicked: () -> Unit
 ) {
@@ -108,7 +109,7 @@ fun DashboardTopBar(
         },
         actions = {
             if (isBackIcon) {
-                IconButton(onClick = { /* TODO: Handle Notification Click */ }) {
+                IconButton(onClick = { onNotificationClicked() }) {
                     Icon(
                         Icons.Filled.Notifications,
                         contentDescription = "Notifications",

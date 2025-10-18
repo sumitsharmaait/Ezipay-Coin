@@ -31,11 +31,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.ui.composables.GoldGradientButton
-import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
 import com.app.ezipaycoin.ui.theme.cardBorderColor
 import com.app.ezipaycoin.ui.theme.cardGreyTextColor
@@ -73,22 +71,22 @@ fun Staking() {
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            "Your Stakes",
-            style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        val staks = listOf(
-            YourStakes("800 EZP", "200 EZP", "31/10/2025"),
-            YourStakes("500 EZP", "100 EZP", "20/12/2025"),
-            YourStakes("800 EZP", "200 EZP", "31/10/2025"),
-            YourStakes("500 EZP", "100 EZP", "20/12/2025")
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            staks.forEach { stake ->
-                YourStakesCard(stake = stake)
-            }
-        }
+//        Text(
+//            "Your Stakes",
+//            style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
+//        )
+//        Spacer(modifier = Modifier.height(4.dp))
+//        val staks = listOf(
+//            YourStakes("800 EZP", "200 EZP", "31/10/2025"),
+//            YourStakes("500 EZP", "100 EZP", "20/12/2025"),
+//            YourStakes("800 EZP", "200 EZP", "31/10/2025"),
+//            YourStakes("500 EZP", "100 EZP", "20/12/2025")
+//        )
+//        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+//            staks.forEach { stake ->
+//                YourStakesCard(stake = stake)
+//            }
+//        }
     }
 
 }
@@ -273,10 +271,10 @@ data class YourStakes(
     val lockedUntil: String
 )
 
-@Preview
-@Composable
-fun StakingPreview() {
-    EzipayCoinTheme {
-        Staking()
-    }
-}
+//@Preview
+//@Composable
+//fun StakingPreview() {
+//    EzipayCoinTheme {
+//        Staking()
+//    }
+//}

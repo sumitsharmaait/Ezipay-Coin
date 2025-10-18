@@ -1,7 +1,6 @@
 package com.app.ezipaycoin.presentation.walletsetup
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -24,7 +23,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -33,7 +31,6 @@ import androidx.navigation.compose.rememberNavController
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.navigation.Screen
 import com.app.ezipaycoin.ui.composables.GoldGradientButton
-import com.app.ezipaycoin.ui.composables.GradientText
 import com.app.ezipaycoin.ui.composables.TopAppBarWithProgressIndicator
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
@@ -59,14 +56,14 @@ fun CreateNewWallet(
                     .padding(start = 20.dp, end = 20.dp, bottom = 32.dp, top = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                GradientText(
-                    text = "Remind Me Later",
-                    modifier = Modifier
-                        .clickable { /* TODO: Handle Remind Me Later */ }
-                        .padding(vertical = 8.dp),
-                    style = MaterialTheme.typography.titleLarge,
-                    align = TextAlign.Center
-                )
+//                GradientText(
+//                    text = "Remind Me Later",
+//                    modifier = Modifier
+//                        .clickable { /* TODO: Handle Remind Me Later */ }
+//                        .padding(vertical = 8.dp),
+//                    style = MaterialTheme.typography.titleLarge,
+//                    align = TextAlign.Center
+//                )
 //                Text(
 //                    text = "Remind Me Later",
 //                    style = MaterialTheme.typography.bodyMedium.copy(
@@ -77,7 +74,7 @@ fun CreateNewWallet(
 //                        .clickable { /* TODO: Handle Remind Me Later */ }
 //                        .padding(vertical = 8.dp)
 //                )
-                Spacer(modifier = Modifier.height(12.dp))
+//                Spacer(modifier = Modifier.height(12.dp))
                 GoldGradientButton(
                     "Secure Now",
                     onClick = { navController.navigate(Screen.Auth.SecureWallet) },

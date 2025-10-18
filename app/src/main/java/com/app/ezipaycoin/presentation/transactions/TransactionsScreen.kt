@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +45,7 @@ import com.app.ezipaycoin.ui.theme.receivedAmountBackgroundColor
 import com.app.ezipaycoin.ui.theme.receivedAmountTextColor
 import com.app.ezipaycoin.ui.theme.sendAmountBackgroundColor
 import com.app.ezipaycoin.ui.theme.sendAmountTextColor
+import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.shortenAddress
 
 @Composable
@@ -121,7 +122,7 @@ private fun TransactionListWithPagination(
             contentPadding = PaddingValues(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(transactions, key = { it.id }) { transaction ->
+            itemsIndexed(transactions, key = { index, item -> item.id + index }) { _, transaction ->
                 TransactionItemRow(item = transaction, onItemClick = {
                     onItemClick(transaction)
                 })
@@ -136,6 +137,21 @@ private fun TransactionListWithPagination(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(color = OnboardingGold1)
+                    }
+                }
+            }
+            if (state.responseState is ResponseState.Error){
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = (state.responseState as ResponseState.Error).message,
+                            style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor)
+                        )
                     }
                 }
             }

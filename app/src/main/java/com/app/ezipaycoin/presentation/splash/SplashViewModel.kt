@@ -2,7 +2,7 @@ package com.app.ezipaycoin.presentation.splash
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.ezipaycoin.presentation.App
+import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -15,7 +15,7 @@ class SplashViewModel : ViewModel() {
 
     init {
         viewModelScope.launch {
-            val prefs = App.getInstance().dataStore.data.first()
+            val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
             val isWalletCreated = prefs.isWalletCreated
             _uiState.value = _uiState.value.copy(
                 isLoggedIn = isWalletCreated
