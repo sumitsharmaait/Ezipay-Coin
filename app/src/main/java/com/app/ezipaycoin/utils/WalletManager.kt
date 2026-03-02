@@ -56,7 +56,7 @@ object WalletManager {
 
     fun generateInvoiceNo(
         minLength: Int = 10,
-        maxLength: Int = 20
+        maxLength: Int = 15
     ): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         val suffix = System.currentTimeMillis()

@@ -94,7 +94,7 @@ fun Withdraw(
 
         is ResponseState.Success -> {
             //val data = (state.networkInfoResponse as ResponseState.Success<List<NetworkInfoByTokenResponse.NetworkInfo>>).data
-            WithdrawScreenWithNetworkInfo(vm = viewModel)
+            WithdrawScreenWithNetworkInfo(vm = viewModel, navController)
         }
 
         is ResponseState.Error -> {
@@ -116,7 +116,8 @@ fun Withdraw(
 
 @Composable
 private fun WithdrawScreenWithNetworkInfo(
-    vm: WithdrawViewModel
+    vm: WithdrawViewModel,
+    navController: NavController
 ) {
     val state by vm.uiState.collectAsState()
     val context = LocalContext.current
@@ -192,7 +193,10 @@ private fun WithdrawScreenWithNetworkInfo(
         }
         Spacer(modifier = Modifier.height(24.dp))
         SlideToPayButtonSection(
-            vm, state, modifier = Modifier.height(50.dp)
+            vm, state, modifier = Modifier.height(50.dp),
+            onPay = {
+                navController.popBackStack()
+            }
         )
 
 
@@ -251,7 +255,8 @@ private fun ScanQrSection(
 
 @Composable
 private fun SlideToPayButtonSection(
-    vm: WithdrawViewModel, state: WithdrawState, modifier: Modifier
+    vm: WithdrawViewModel, state: WithdrawState, modifier: Modifier,
+    onPay: () -> Unit = {}
 ) {
     val density = LocalDensity.current
     val buttonWidthDp = 100.dp // Width of the draggable "Pay >" part
@@ -283,7 +288,13 @@ private fun SlideToPayButtonSection(
             }
 
             is ResponseState.Success -> {
-
+                Dialogue(
+                    isError = false,
+                    msg = (state.transferInfoResponse as ResponseState.Success).data
+                ) {
+                    vm.onEvent(WithdrawEvent.DismissDialog(1))
+                    onPay()
+                }
             }
 
             is ResponseState.Error -> {

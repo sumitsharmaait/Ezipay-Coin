@@ -34,6 +34,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.app.ezipaycoin.R
+import com.app.ezipaycoin.presentation.dashboard.earn.airdrops.Airdrops
+import com.app.ezipaycoin.presentation.dashboard.earn.checkin.Checkin
+import com.app.ezipaycoin.presentation.dashboard.earn.leaderboard.Leaderboard
+import com.app.ezipaycoin.presentation.dashboard.earn.spin.SpinAndWinScreen
+import com.app.ezipaycoin.presentation.dashboard.earn.staking.Staking
 import com.app.ezipaycoin.ui.composables.AppGreyButton
 import com.app.ezipaycoin.ui.composables.GoldGradientButton
 import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
@@ -167,6 +172,10 @@ fun EarnScreen() {
 
         when (selectedTabIndex) {
             0 -> Staking()
+            1 -> Airdrops()
+            2 -> Checkin()
+            3 -> SpinAndWinScreen()
+            4 -> Leaderboard()
         }
 
 

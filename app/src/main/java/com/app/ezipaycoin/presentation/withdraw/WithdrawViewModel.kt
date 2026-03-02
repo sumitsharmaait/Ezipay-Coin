@@ -129,8 +129,6 @@ class WithdrawViewModel(
             try {
                 invoiceNumber = WalletManager.generateInvoiceNo()
                 val req = WithdrawalTransferPayoutRequest(
-                    PrivatekeyofFromwalletaddress = "",
-                    Fromwalletaddress = "",
                     InvoiceNumber = invoiceNumber,
                     NetworkValue = _uiState.value.networkInfo,
                     TokenValue = tokenId.symbol,

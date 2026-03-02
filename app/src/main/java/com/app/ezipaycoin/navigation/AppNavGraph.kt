@@ -16,6 +16,8 @@ import com.app.ezipaycoin.presentation.dashboard.pay.PayScreen
 import com.app.ezipaycoin.presentation.dashboard.pay.PayViewModel
 import com.app.ezipaycoin.presentation.deposit.Deposit
 import com.app.ezipaycoin.presentation.deposit.DepositViewModel
+import com.app.ezipaycoin.presentation.depositviacard.DepositViaCard
+import com.app.ezipaycoin.presentation.depositviacard.DepositViaCardViewModel
 import com.app.ezipaycoin.presentation.profile.MyProfile
 import com.app.ezipaycoin.presentation.profile.MyProfileViewModel
 import com.app.ezipaycoin.presentation.receive.ReceiveScreen
@@ -27,6 +29,7 @@ import com.app.ezipaycoin.presentation.transactions.AllTransactionsViewModel
 import com.app.ezipaycoin.presentation.transactions.TransactionScreen
 import com.app.ezipaycoin.presentation.viewwalletdetails.ViewWalletDetails
 import com.app.ezipaycoin.presentation.viewwalletdetails.ViewWalletDetailsVM
+import com.app.ezipaycoin.presentation.webview.WebViewScreen
 import com.app.ezipaycoin.presentation.withdraw.Withdraw
 import com.app.ezipaycoin.presentation.withdraw.WithdrawViewModel
 import com.app.ezipaycoin.utils.ViewModelFactory
@@ -113,6 +116,26 @@ fun NavGraphBuilder.appNavGraph(
                 viewModel = depositViewModel,
             )
         }
+
+        composable<Screen.AppNavScreens.DepositViaCard> { backStackEntry ->
+            val token = backStackEntry.toRoute<Screen.AppNavScreens.DepositViaCard>()
+            val depositViaCardViewModel: DepositViaCardViewModel = viewModel(
+                factory = ViewModelFactory {
+                    val repository = DepositWithdrawalRepoImpl(depositWithdrawalApiClient)
+                    DepositViaCardViewModel(repository, Json.decodeFromString(token.token))
+                }
+            )
+            DepositViaCard(
+                navController = navController,
+                viewModel = depositViaCardViewModel,
+            )
+        }
+
+        composable<Screen.AppNavScreens.WebViewScreen> { backStackEntry ->
+            val url = backStackEntry.toRoute<Screen.AppNavScreens.WebViewScreen>()
+            WebViewScreen(url = url.url, onBack = { navController.popBackStack() })
+        }
+
 
         composable<Screen.AppNavScreens.Withdraw> { navBackStackEntry ->
             val tokenId = navBackStackEntry.toRoute<Screen.AppNavScreens.Withdraw>()

@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.School
@@ -71,11 +70,6 @@ class App : Application() {
             "Profile",
             Icons.Filled.Person,
             Icons.Filled.Person
-        ),
-        BottomNavItem(
-            "Referrals & Rewards",
-            Icons.Filled.WorkspacePremium,
-            Icons.Filled.WorkspacePremium
         ),
         BottomNavItem(
             "Transaction history",

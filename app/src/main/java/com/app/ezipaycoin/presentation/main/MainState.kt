@@ -18,12 +18,14 @@ data class MainState(
         "Learn",
         "Pay",
         "MyProfile",
-        "Referrals & Rewards",
+        "Rewards",
         "Receive",
         "Transactions",
         "TransactionDetails",
         "Deposit",
+        "DepositViaCard",
         "Withdraw",
-        "WalletDetails"
+        "WalletDetails",
+        "WebViewScreen"
     )
 )

@@ -294,24 +294,41 @@ fun WalletScreen(
                                     )
                                 )
                                 state.selectedTokenId?.let {
-                                    if (title == "On-chain deposit") {
-                                        navController.navigate(
-                                            Screen.AppNavScreens.Deposit(
-                                                token = Json.encodeToString(
-                                                    it
+
+                                    when (title) {
+                                        "Buy Crypto with Card" -> {
+                                            navController.navigate(
+                                                Screen.AppNavScreens.DepositViaCard(
+                                                    token = Json.encodeToString(
+                                                        it
+                                                    )
                                                 )
                                             )
-                                        )
-                                    }else if (title == "P2P"){
-                                        navController.navigate(Screen.AppNavScreens.Pay)
-                                    } else {
-                                        navController.navigate(
-                                            Screen.AppNavScreens.Withdraw(
-                                                token = Json.encodeToString(
-                                                    it
+                                        }
+
+                                        "Deposit (On-chain)" -> {
+                                            navController.navigate(
+                                                Screen.AppNavScreens.Deposit(
+                                                    token = Json.encodeToString(
+                                                        it
+                                                    )
                                                 )
                                             )
-                                        )
+                                        }
+
+                                        "P2P Transfer" -> {
+                                            navController.navigate(Screen.AppNavScreens.Pay)
+                                        }
+
+                                        else -> {
+                                            navController.navigate(
+                                                Screen.AppNavScreens.Withdraw(
+                                                    token = Json.encodeToString(
+                                                        it
+                                                    )
+                                                )
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -338,12 +355,20 @@ private fun SecureWalletSheetContent(onGotItClick: (title: String) -> Unit) {
             .verticalScroll(rememberScrollState()), // In case content is long
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(8.dp)) // Space after drag handle
-
+//        Spacer(modifier = Modifier.height(8.dp)) // Space after drag handle
+//        RowBottomSheet(
+//            iconRes = R.drawable.ic_usdt_icon,
+//            title = "Buy Crypto with Card",
+//            subTitle = "Instantly purchase crypto using your Visa or MasterCard. Funds arrive in your wallet via on-chain transfer.",
+//            onItemClick = {
+//                onGotItClick(it)
+//            }
+//        )
+        Spacer(modifier = Modifier.height(8.dp))
         RowBottomSheet(
             iconRes = R.drawable.ic_usdt_icon,
-            title = "On-chain deposit",
-            subTitle = "Sent coins to the recipient’s address via the blockchain networks",
+            title = "Deposit (On-chain)",
+            subTitle = "Receive tokens directly to your wallet from any external address on the blockchain network.",
             onItemClick = {
                 onGotItClick(it)
             }
@@ -351,8 +376,8 @@ private fun SecureWalletSheetContent(onGotItClick: (title: String) -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
         RowBottomSheet(
             iconRes = R.drawable.ic_usdt_icon,
-            title = "On-chain withdrawal",
-            subTitle = "Sent coins to the recipient’s address via the blockchain networks",
+            title = "Withdraw (On-chain)",
+            subTitle = "Send tokens from your wallet to any valid on-chain address securely and quickly.",
             onItemClick = {
                 onGotItClick(it)
             }
@@ -369,8 +394,8 @@ private fun SecureWalletSheetContent(onGotItClick: (title: String) -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
         RowBottomSheet(
             iconRes = R.drawable.ic_usdt_icon,
-            title = "P2P",
-            subTitle = "Enjoy peer-to-peer transactions at competitive prices with local payments",
+            title = "P2P Transfer",
+            subTitle = "Send crypto to friends or contacts using their wallet address.",
             onItemClick = {
                 onGotItClick(it)
             }

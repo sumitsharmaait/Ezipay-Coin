@@ -1,5 +1,7 @@
 package com.app.ezipaycoin.presentation.dashboard.home
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -52,9 +54,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.app.ezipaycoin.data.remote.dto.QuickAction
@@ -88,6 +92,7 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val sharedState by sharedViewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
 //    LaunchedEffect(Unit) {
 //        sharedViewModel.onEvent(SharedEvent.FetchBalance)
@@ -108,7 +113,7 @@ fun HomeScreen(
         is ResponseState.Success -> {
             val data =
                 (sharedState.responseState as ResponseState.Success<BaseResponse<DashboardResponse>>).data.apiData
-            HomeSuccessData(state, data, viewModel, sharedViewModel, sharedState, navController)
+            HomeSuccessData(state, data, viewModel, sharedViewModel, sharedState, navController, context)
         }
 
         is ResponseState.Error -> {
@@ -139,7 +144,8 @@ private fun HomeSuccessData(
     viewModel: HomeViewModel,
     sharedViewModel: WalletSharedViewModel,
     sharedState: SharedState,
-    navController: NavController
+    navController: NavController,
+    context: Context
 ) {
     Column(
         modifier = Modifier
@@ -289,7 +295,42 @@ private fun HomeSuccessData(
                         .padding(vertical = 8.dp)
                 ) {
                     OutlinedIconButton(
-                        onClick = { viewModel.onEvent(HomeEvent.ComingSoonDialog(true)) },
+                        onClick = {
+                            when (action.label) {
+                                "Add Funds" -> {
+                                    navController.navigate(Screen.AppNavScreens.Receive) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                                "Staking", "Daily Rewards", "Gift Cards" -> {
+                                    navController.navigate(Screen.BottomNavScreens.Earn) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                                "Pay Bills" -> {
+                                    navController.navigate(Screen.AppNavScreens.Pay) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                                else -> {
+                                    val intent = Intent(Intent.ACTION_VIEW,
+                                        "https://www.ezipaycoin.com/".toUri())
+                                    context.startActivity(intent)
+                                }
+                            }
+                        },
                         modifier = Modifier,
                         shape = RoundedCornerShape(5.dp),
                         border = BorderStroke(1.dp, color = greyButtonBackground)

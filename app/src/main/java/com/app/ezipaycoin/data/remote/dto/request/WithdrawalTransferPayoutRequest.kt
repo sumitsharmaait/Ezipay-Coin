@@ -4,8 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class WithdrawalTransferPayoutRequest(
-    val PrivatekeyofFromwalletaddress: String = "",
-    val Fromwalletaddress: String = "",
+//    val PrivatekeyofFromwalletaddress: String = "",
+//    val Fromwalletaddress: String = "",
     val MerchantCallbackUrl: String = "Ezcoin",
     val InvoiceNumber: String = "",
     val TokenValue: String = "",

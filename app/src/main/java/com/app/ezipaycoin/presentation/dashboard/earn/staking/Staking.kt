@@ -1,4 +1,4 @@
-package com.app.ezipaycoin.presentation.dashboard.earn
+package com.app.ezipaycoin.presentation.dashboard.earn.staking
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
@@ -71,22 +71,19 @@ fun Staking() {
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-//        Text(
-//            "Your Stakes",
-//            style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
-//        )
-//        Spacer(modifier = Modifier.height(4.dp))
-//        val staks = listOf(
-//            YourStakes("800 EZP", "200 EZP", "31/10/2025"),
-//            YourStakes("500 EZP", "100 EZP", "20/12/2025"),
-//            YourStakes("800 EZP", "200 EZP", "31/10/2025"),
-//            YourStakes("500 EZP", "100 EZP", "20/12/2025")
-//        )
-//        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-//            staks.forEach { stake ->
-//                YourStakesCard(stake = stake)
-//            }
-//        }
+        Text(
+            "Your Stakes",
+            style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        val staks = listOf(
+            YourStakes("0 EZP", "0 EZP", "31/10/2025"),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            staks.forEach { stake ->
+                YourStakesCard(stake = stake)
+            }
+        }
     }
 
 }
@@ -160,7 +157,7 @@ private fun StakingPoolCard(pool: StakingPool) {
                 )
             }
             GoldGradientButton(
-                label = "Claim",
+                label = "Stake",
                 onClick = { /*TODO*/ },
                 modifier = Modifier.weight(1.5f)
             )

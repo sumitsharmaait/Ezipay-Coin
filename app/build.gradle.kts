@@ -14,8 +14,8 @@ android {
         applicationId = "com.app.ezipaycoin"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 3
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -74,20 +74,20 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.core.splashscreen)
     implementation("com.trustwallet:wallet-core:4.3.13")
-
+    implementation("androidx.webkit:webkit:1.10.0")
     implementation("androidx.compose.foundation:foundation:1.7.1")
     // For Icons
     implementation("androidx.compose.material:material-icons-core:1.6.7") // Or latest
     implementation("androidx.compose.material:material-icons-extended:1.6.7")
    // implementation(libs.androidx.navigation.runtime.android)
     implementation("androidx.activity:activity:1.8.1")
-
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.okhttp)
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.google.zxing:core:3.5.3")
+    implementation("com.kizitonwose.calendar:compose:2.9.0")
     implementation(platform(libs.firebase.bom))
 
     implementation(libs.firebase.auth.ktx)

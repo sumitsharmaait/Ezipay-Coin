@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.app.ezipaycoin.ui.composables.Dialogue
+import com.app.ezipaycoin.ui.composables.Timer
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.Gradient_1
 import com.app.ezipaycoin.ui.theme.Gradient_2
@@ -73,7 +74,9 @@ fun Deposit(
 
         is ResponseState.Success -> {
             val data = (state.walletInfoResponse as ResponseState.Success<String>).data
-            DepositeScreenSuccess(viewModel = viewModel, data)
+            DepositeScreenSuccess(viewModel = viewModel, data, onTimerFinished = {
+                navController.popBackStack()
+            })
         }
 
         is ResponseState.Error -> {
@@ -98,6 +101,7 @@ fun Deposit(
                 msg = "Transaction Success"
             ) {
                 viewModel.onEvent(DepositeEvent.DismissDialog(1))
+                navController.popBackStack()
             }
         }
 
@@ -117,7 +121,11 @@ fun Deposit(
 }
 
 @Composable
-private fun DepositeScreenSuccess(viewModel: DepositViewModel, walletAddress: String) {
+private fun DepositeScreenSuccess(
+    viewModel: DepositViewModel,
+    walletAddress: String,
+    onTimerFinished: () -> Unit
+) {
     val state by viewModel.uiState.collectAsState()
     val context: Context = LocalContext.current
     Column(
@@ -155,8 +163,13 @@ private fun DepositeScreenSuccess(viewModel: DepositViewModel, walletAddress: St
                 )
             }
         }
-
-
+        Spacer(modifier = Modifier.height(16.dp))
+        Timer(
+            onFinished = {
+                onTimerFinished()
+                // handle timeout (disable button, show message, etc.)
+            }
+        )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             "Scan this QR code to deposite payment",

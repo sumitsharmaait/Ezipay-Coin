@@ -5,6 +5,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Color
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.set
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
 import com.app.ezipaycoin.data.remote.dto.UserPreferences
@@ -23,14 +25,10 @@ fun String.generateQrCodeBitmap(size: Int = 512): Bitmap {
     val hints = mapOf(EncodeHintType.MARGIN to 1) // Small margin
     val qrCodeWriter = QRCodeWriter()
     val bitMatrix = qrCodeWriter.encode(this, BarcodeFormat.QR_CODE, size, size, hints)
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
+    val bitmap = createBitmap(size, size, Bitmap.Config.RGB_565)
     for (x in 0 until size) {
         for (y in 0 until size) {
-            bitmap.setPixel(
-                x,
-                y,
-                if (bitMatrix[x, y]) Color.Black.hashCode() else Color.White.hashCode()
-            )
+            bitmap[x, y] = if (bitMatrix[x, y]) Color.Black.hashCode() else Color.White.hashCode()
         }
     }
     return bitmap
@@ -55,3 +53,13 @@ val Context.userPreferencesDataStore: DataStore<UserPreferences> by dataStore(
     fileName = "user-preferences",
     serializer = UserPreferencesSerializer
 )
+
+
+fun String.formatExpiry(input: String): String {
+    val digits = input.filter { it.isDigit() }.take(4)
+    return when {
+        digits.length <= 2 -> digits
+        else -> digits.substring(0, 2) + "/" + digits.substring(2)
+    }
+}
+

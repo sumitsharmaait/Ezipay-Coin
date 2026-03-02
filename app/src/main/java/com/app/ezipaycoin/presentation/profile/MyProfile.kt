@@ -3,6 +3,8 @@ package com.app.ezipaycoin.presentation.profile
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -57,6 +59,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.scale
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.ezipaycoin.R
@@ -75,6 +78,7 @@ import com.app.ezipaycoin.ui.theme.tagsTextColor
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.copyToClipboard
 import java.io.File
+import java.io.FileOutputStream
 
 @Composable
 fun MyProfile(
@@ -89,7 +93,7 @@ fun MyProfile(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val file = uriToFile(context, uri)
+            val file = compressImage(context, uri)
             viewModel.onEvent(MyProfileEvent.ImageSelected(it, file))
         }
     }
@@ -396,16 +400,71 @@ data class SettingItem(
     val onClick: () -> Unit
 )
 
-fun uriToFile(context: Context, uri: Uri): File {
+//fun uriToFile(context: Context, uri: Uri): File {
+//    val inputStream = context.contentResolver.openInputStream(uri)
+//    val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
+//    inputStream.use { input ->
+//        tempFile.outputStream().use { output ->
+//            input?.copyTo(output)
+//        }
+//    }
+//    return tempFile
+//}
+
+fun compressImage(
+    context: Context,
+    uri: Uri,
+    maxWidth: Int = 1080,
+    maxHeight: Int = 1080,
+    quality: Int = 80
+): File {
+
     val inputStream = context.contentResolver.openInputStream(uri)
-    val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
-    inputStream.use { input ->
-        tempFile.outputStream().use { output ->
-            input?.copyTo(output)
-        }
+        ?: throw IllegalArgumentException("Cannot open input stream")
+
+    val originalBitmap = BitmapFactory.decodeStream(inputStream)
+    inputStream.close()
+
+    // Resize bitmap
+    val resizedBitmap = resizeBitmap(originalBitmap, maxWidth, maxHeight)
+
+    // Output file
+    val outputFile = File(
+        context.cacheDir,
+        "compressed_${System.currentTimeMillis()}.jpg"
+    )
+
+    FileOutputStream(outputFile).use { out ->
+        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
     }
-    return tempFile
+
+    return outputFile
 }
+
+fun resizeBitmap(
+    bitmap: Bitmap,
+    maxWidth: Int,
+    maxHeight: Int
+): Bitmap {
+    val width = bitmap.width
+    val height = bitmap.height
+
+    val ratioBitmap = width.toFloat() / height.toFloat()
+    val ratioMax = maxWidth.toFloat() / maxHeight.toFloat()
+
+    var finalWidth = maxWidth
+    var finalHeight = maxHeight
+
+    if (ratioMax > ratioBitmap) {
+        finalWidth = (maxHeight * ratioBitmap).toInt()
+    } else {
+        finalHeight = (maxWidth / ratioBitmap).toInt()
+    }
+
+    return bitmap.scale(finalWidth, finalHeight)
+}
+
+
 
 //@Preview
 //@Composable

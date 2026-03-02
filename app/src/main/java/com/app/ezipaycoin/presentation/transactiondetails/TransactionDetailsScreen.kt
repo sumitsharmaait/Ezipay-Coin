@@ -224,7 +224,9 @@ private fun InformationSection(item: TransactionsResponse.TransactionsItem) {
     var showTooltip by remember { mutableStateOf(false) }
 
     Column {
-        InfoRow(label = "Nonce", value = item.nonce)
+        item.nonce?.let {
+            InfoRow(label = "Nonce", value = it)
+        }
         InfoRow(
             label = "Transaction ID",
             value = item.id.shortenAddress(),

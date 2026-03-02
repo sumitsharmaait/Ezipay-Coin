@@ -24,7 +24,7 @@ data class TransactionsResponse(
         val status: String,
         val to: String,
         val from: String,
-        val nonce: String,
+        val nonce: String?,
         val gas: String,
         val gasPrice: String,
         val gasUsed: String,

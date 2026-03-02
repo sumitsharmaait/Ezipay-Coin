@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.data.remote.api
 
 import com.app.ezipaycoin.data.remote.dto.request.BitPayRequest
+import com.app.ezipaycoin.data.remote.dto.request.DepositeViaCardRequest
 import com.app.ezipaycoin.data.remote.dto.request.EstimateGasRequest
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.data.remote.dto.request.NetworkInfoByTokenRequest
@@ -12,6 +13,7 @@ import com.app.ezipaycoin.data.remote.dto.request.WithdrawalTransferPayoutReques
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
 import com.app.ezipaycoin.data.remote.dto.response.BnbChainResponse
 import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
+import com.app.ezipaycoin.data.remote.dto.response.DepositeByCardResponse
 import com.app.ezipaycoin.data.remote.dto.response.LoginResponse
 import com.app.ezipaycoin.data.remote.dto.response.NetworkInfoByTokenResponse
 import com.app.ezipaycoin.data.remote.dto.response.NonceResponse
@@ -73,5 +75,8 @@ interface ApiService {
 
     @POST("CryptoPayinTransactionStatusCheck")
     suspend fun checkDepositeTransactionStatus(@Body request: StatusDepositeRequest): WalletInfoDepositeByTokenResponse
+
+    @POST("CardTxn")
+    suspend fun postDepositeViaCard(@Body request: DepositeViaCardRequest): DepositeByCardResponse
 
 }
