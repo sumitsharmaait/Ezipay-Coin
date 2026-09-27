@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.data.remote.api
 
+import com.app.ezipaycoin.BuildConfig
 import com.app.ezipaycoin.utils.SessionManager
 import okhttp3.Credentials
 import okhttp3.Interceptor
@@ -11,7 +12,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    private const val BASE_URL = "https://api.ezipaycoin.com/api/v1/"
+    // Per build type; see app/build.gradle.kts.
+    private const val BASE_URL = BuildConfig.API_BASE_URL
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY // Or HEADERS, BASIC, NONE
     }
@@ -42,7 +44,7 @@ object ApiClient {
    //    https://bsc-testnet-dataseed.bnbchain.org test net
     val retrofitPay: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl("https://bsc-dataseed.bnbchain.org")
+            .baseUrl(BuildConfig.RPC_URL)
             .client(client1)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -58,7 +60,7 @@ object ApiClient {
 
     val depositWithdrawalPay: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl("https://apiusdt.iripash.com/api/Payment/")
+            .baseUrl(BuildConfig.IRIPASH_BASE_URL)
             .client(clientBasicAuth)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
