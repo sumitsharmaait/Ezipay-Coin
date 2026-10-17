@@ -117,7 +117,32 @@ fun HomeScreen(
         }
 
         is ResponseState.Error -> {
-
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AppBackgroundColor)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Couldn't load your coins",
+                    style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = (sharedState.responseState as ResponseState.Error).message,
+                    style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                GoldGradientButton(
+                    label = "Retry",
+                    onClick = { sharedViewModel.onEvent(SharedEvent.FetchBalance) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
 
         ResponseState.Idle -> {
@@ -225,7 +250,7 @@ private fun HomeSuccessData(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = (sharedState.selectedCrypto?.formattedBalance ?: ""),
+                    text = (sharedState.selectedCrypto?.formattedBalance ?: "0.0000"),
                     style = MaterialTheme.typography.displayMedium.copy(
                         brush = Brush.linearGradient(
                             colors = listOf(Gradient_1, Gradient_2, Gradient_3, Gradient_4)
@@ -234,7 +259,7 @@ private fun HomeSuccessData(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = ("= $" + sharedState.selectedCrypto?.formattedFiatValue),
+                    text = ("= $" + (sharedState.selectedCrypto?.formattedFiatValue ?: "0.00")),
                     style = MaterialTheme.typography.titleMedium.copy(color = Color.White)
                 )
 

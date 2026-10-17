@@ -496,11 +496,15 @@ private fun TokenRow(
                 tokenInfo.formattedBalance,
                 style = MaterialTheme.typography.titleSmall.copy(color = Color.White)
             )
-            Text(
-                text = if (marketSnapshot[index].changePct > 0) "+ " + marketSnapshot[index].changePct + "%" else
-                    marketSnapshot[index].changePct.toString() + "%",
-                style = MaterialTheme.typography.labelSmall.copy(color = if (marketSnapshot[index].changePct > 0) receivedAmountTextColor else sendAmountTextColor)
-            )
+            // Match by symbol; the index is only a fallback, since the two lists can differ in length.
+            val snapshot = marketSnapshot.firstOrNull { it.symbol.equals(tokenInfo.symbol, ignoreCase = true) }
+                ?: marketSnapshot.getOrNull(index)
+            snapshot?.let {
+                Text(
+                    text = if (it.changePct > 0) "+ " + it.changePct + "%" else it.changePct.toString() + "%",
+                    style = MaterialTheme.typography.labelSmall.copy(color = if (it.changePct > 0) receivedAmountTextColor else sendAmountTextColor)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(16.dp))
