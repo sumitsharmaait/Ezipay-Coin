@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.data.remote.api
 
+import com.app.ezipaycoin.BuildConfig
 import com.app.ezipaycoin.utils.SessionManager
 import okhttp3.Credentials
 import okhttp3.Interceptor
@@ -11,7 +12,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    private const val BASE_URL = "https://api.ezipaycoin.com/api/v1/"
+    private const val BASE_URL = BuildConfig.API_BASE_URL
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY // Or HEADERS, BASIC, NONE
     }

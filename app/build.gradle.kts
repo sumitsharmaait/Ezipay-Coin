@@ -21,6 +21,8 @@ android {
             useSupportLibrary = true
         }
         manifestPlaceholders["facebook_app_id"] = "833416492706197"
+
+        buildConfigField("String", "API_BASE_URL", "\"https://api.ezipaycoin.com/api/v1/\"")
     }
 
      signingConfigs {
@@ -41,6 +43,14 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
+
+        debug {
+            // The .NET API running on this machine (port 5009; 5000 is taken by the macOS AirPlay receiver).
+            // 10.0.2.2 is how the Android emulator reaches the host. For a USB device run
+            // `adb reverse tcp:5009 tcp:5009` and build with -PapiBaseUrl=http://127.0.0.1:5009/api/v1/.
+            val apiBaseUrl = project.findProperty("apiBaseUrl")?.toString() ?: "http://10.0.2.2:5009/api/v1/"
+            buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -51,6 +61,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
