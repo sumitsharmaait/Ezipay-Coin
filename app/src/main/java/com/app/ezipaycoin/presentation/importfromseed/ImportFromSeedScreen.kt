@@ -318,7 +318,6 @@ fun TermsAndConditionsText() {
                     .firstOrNull()
                     ?.let {
                         // TODO: Handle click, e.g., open terms URL
-                        println("Clicked on: ${it.item}")
                     }
             }
     )

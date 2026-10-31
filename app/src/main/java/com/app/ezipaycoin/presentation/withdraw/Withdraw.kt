@@ -328,7 +328,6 @@ private fun SlideToPayButtonSection(
                 // This is a simplified click, a real slide would use draggable
                 if (offsetX > 150f) { // Arbitrary threshold for "slide completion"
                     /* TODO: Execute Payment */
-                    println("Payment Executed (Simplified)")
                     offsetX = 0f // Reset
                 }
             }
