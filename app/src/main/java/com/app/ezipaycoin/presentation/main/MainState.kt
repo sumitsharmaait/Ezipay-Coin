@@ -5,6 +5,7 @@ data class MainState(
     val passwordCreated: Boolean = false,
     val selectedBottomBar: String = "Home",
     val dataLoaded: Boolean = false,
+    val storageError: Boolean = false,
     val bottomBarRoutes: List<String> = listOf(
         "Home",
         "Wallet",
@@ -23,9 +24,9 @@ data class MainState(
         "Transactions",
         "TransactionDetails",
         "Deposit",
-        "DepositViaCard",
         "Withdraw",
         "WalletDetails",
+        "DeleteAccount",
         "WebViewScreen"
     )
 )

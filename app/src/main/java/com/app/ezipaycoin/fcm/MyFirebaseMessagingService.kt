@@ -6,7 +6,10 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
+import android.util.Log
+import com.app.ezipaycoin.BuildConfig
 import com.app.ezipaycoin.R
+import com.app.ezipaycoin.utils.SessionManager
 import com.app.ezipaycoin.presentation.main.MainActivity
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -14,6 +17,8 @@ import com.google.firebase.messaging.RemoteMessage
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        // The app is open: ask the wallet to refresh balances so incoming funds show up.
+        SessionManager.notifyTransferActivity()
         // Handle messages when the app is in foreground
         remoteMessage.notification?.let {
             sendNotification(it.title ?: "Notification", it.body ?: "")
@@ -22,8 +27,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // Send token to your backend if needed
-        println("🔥 FCM Token: $token")
+        if (BuildConfig.DEBUG) Log.d("FCM", "Registration token refreshed")
     }
 
     private fun sendNotification(title: String, messageBody: String) {

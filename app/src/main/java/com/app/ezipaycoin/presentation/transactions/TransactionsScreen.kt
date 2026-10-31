@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -142,16 +143,21 @@ private fun TransactionListWithPagination(
             }
             if (state.responseState is ResponseState.Error){
                 item {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        contentAlignment = Alignment.Center
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             text = (state.responseState as ResponseState.Error).message,
                             style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor)
                         )
+                        if (state.canLoadMore && !isLoading) {
+                            TextButton(onClick = { viewModel.retry() }) {
+                                Text("Retry", color = OnboardingGold1)
+                            }
+                        }
                     }
                 }
             }
@@ -174,6 +180,10 @@ private fun TransactionListWithPagination(
         }
     }
 }
+
+/** The other side of the transfer: the recipient for sent items, the sender for received ones. */
+internal fun TransactionsResponse.TransactionsItem.counterparty(): String =
+    (if (type.equals("send", true)) to else from).orEmpty()
 
 @Composable
 private fun TransactionItemRow(
@@ -202,7 +212,7 @@ private fun TransactionItemRow(
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                item.to.shortenAddress(),
+                item.counterparty().shortenAddress(),
                 maxLines = 1,
                 modifier = Modifier.padding(end = 8.dp),
                 style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor)
@@ -212,13 +222,15 @@ private fun TransactionItemRow(
                 modifier = Modifier.padding(top = 4.dp),
                 style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor.copy(alpha = 0.5f))
             )
+            item.fiatLabel?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor.copy(alpha = 0.5f))
+                )
+            }
         }
         Text(
-            text = if (item.type.equals(
-                    "send",
-                    true
-                )
-            ) "-" + item.formattedAmount else "+" + item.formattedAmount,
+            text = item.amountLabel,
             style = MaterialTheme.typography.titleMedium.copy(
                 color = if (item.type.equals(
                         "send",

@@ -109,9 +109,12 @@ fun UnlockScreen(
                     )
                 }
             )
-            if (state.passwordError.isNotBlank()) {
+            val errorText = state.passwordError.ifBlank {
+                (state.responseState as? ResponseState.Error)?.message.orEmpty()
+            }
+            if (errorText.isNotBlank()) {
                 Text(
-                    text = state.passwordError,
+                    text = errorText,
                     style = MaterialTheme.typography.titleSmall.copy(color = Color.Red),
                     modifier = Modifier
                         .fillMaxWidth()

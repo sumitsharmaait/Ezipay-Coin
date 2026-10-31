@@ -7,7 +7,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.repository.HomeRepoImpl
+import com.app.ezipaycoin.config.ChainConfig
+import com.app.ezipaycoin.data.repository.EarnRepoImpl
+import com.app.ezipaycoin.data.repository.LearnRepoImpl
 import com.app.ezipaycoin.presentation.dashboard.earn.EarnScreen
+import com.app.ezipaycoin.presentation.dashboard.earn.EarnViewModel
 import com.app.ezipaycoin.presentation.dashboard.home.HomeScreen
 import com.app.ezipaycoin.presentation.dashboard.home.HomeViewModel
 import com.app.ezipaycoin.presentation.dashboard.learn.LearnScreen
@@ -16,6 +20,11 @@ import com.app.ezipaycoin.presentation.dashboard.wallet.WalletScreen
 import com.app.ezipaycoin.presentation.dashboard.wallet.WalletViewModel
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.utils.ViewModelFactory
+
+import com.app.ezipaycoin.data.repository.NftRepoImpl
+import com.app.ezipaycoin.presentation.nft.NftViewModel
+import com.app.ezipaycoin.utils.SessionManager
+import com.app.ezipaycoin.utils.WalletManager
 
 fun NavGraphBuilder.bottomNavGraph(
     navController: NavHostController,
@@ -43,24 +52,37 @@ fun NavGraphBuilder.bottomNavGraph(
         composable<Screen.BottomNavScreens.Wallet> {
             val walletViewModel: WalletViewModel = viewModel(
                 factory = ViewModelFactory {
-                    val repository = HomeRepoImpl(apiService)
-                    WalletViewModel(repository)
+                    WalletViewModel(HomeRepoImpl(apiService))
+                }
+            )
+            val nftViewModel: NftViewModel = viewModel(
+                factory = ViewModelFactory {
+                    // NftViewModel(NftRepoImpl(apiService), WalletManager.address.orEmpty())
+                    NftViewModel(NftRepoImpl(apiService)) { WalletManager.address }
                 }
             )
             WalletScreen(
                 navController = navController,
                 viewModel = walletViewModel,
-                walletSharedViewModel
+                sharedViewModel = walletSharedViewModel,
+                nftViewModel = nftViewModel
             )
         }
 
-
         composable<Screen.BottomNavScreens.Learn> {
-            LearnScreen(navController = navController, viewModel = viewModel<LearnViewModel>(), walletSharedViewModel)
+            val learnViewModel: LearnViewModel = viewModel(
+                factory = ViewModelFactory { LearnViewModel(LearnRepoImpl(apiService)) }
+            )
+            LearnScreen(navController = navController, viewModel = learnViewModel, walletSharedViewModel)
         }
 
         composable<Screen.BottomNavScreens.Earn> {
-            EarnScreen()
+            val earnViewModel: EarnViewModel = viewModel(
+                factory = ViewModelFactory {
+                    EarnViewModel(EarnRepoImpl(apiService, ChainConfig.current.chainId.toInt()))
+                }
+            )
+            EarnScreen(earnViewModel)
         }
 
 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Staging builds only: replaces src/main's copy. HTTPS everywhere except the staging server,
+     which is served over plain HTTP for now. Remove the domain-config once staging has TLS. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">18.142.108.53</domain>
+    </domain-config>
+</network-security-config>

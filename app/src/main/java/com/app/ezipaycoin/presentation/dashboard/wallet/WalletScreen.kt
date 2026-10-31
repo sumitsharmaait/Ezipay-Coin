@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.presentation.dashboard.wallet
 
+import com.app.ezipaycoin.BuildConfig
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -54,6 +55,9 @@ import androidx.navigation.NavController
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
 import com.app.ezipaycoin.navigation.Screen
+import com.app.ezipaycoin.presentation.nft.NftHoldingsSection
+import com.app.ezipaycoin.presentation.nft.NftNavEvent
+import com.app.ezipaycoin.presentation.nft.NftViewModel
 import com.app.ezipaycoin.presentation.shared.SharedEvent
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.ui.composables.AppGreyButton
@@ -72,25 +76,47 @@ import com.app.ezipaycoin.ui.theme.grey_23
 import com.app.ezipaycoin.ui.theme.grey_9
 import com.app.ezipaycoin.ui.theme.receivedAmountTextColor
 import com.app.ezipaycoin.ui.theme.sendAmountTextColor
+import com.app.ezipaycoin.utils.ObserveAsEvents
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+
+/** Segments shown above the asset list. */
+private enum class WalletSegment(val label: String) {
+    TOKENS("Tokens"),
+    NFTS("NFTs")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletScreen(
     navController: NavController,
     viewModel: WalletViewModel,
-    sharedViewModel: WalletSharedViewModel
+    sharedViewModel: WalletSharedViewModel,
+    nftViewModel: NftViewModel
 ) {
 
     val state by viewModel.uiState.collectAsState()
     val sharedState by sharedViewModel.uiState.collectAsState()
+    val nftState by nftViewModel.state.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
+    var segment by remember { mutableStateOf(WalletSegment.TOKENS) }
 
     ComingSoonAlert(showDialog = showDialog) {
         showDialog = false
+    }
+
+    ObserveAsEvents(nftViewModel.navEvents) { event ->
+        when (event) {
+            is NftNavEvent.ToDetail ->
+                navController.navigate(Screen.AppNavScreens.NftDetail(event.tokenId))
+
+            NftNavEvent.ToMint ->
+                navController.navigate(Screen.AppNavScreens.NftMint)
+
+            NftNavEvent.Back -> Unit
+        }
     }
 
     Column(
@@ -172,7 +198,7 @@ fun WalletScreen(
                     ) {
                         it.forEach { item ->
                             DropdownMenuItem(
-                                text = { Text(item.symbol) },
+                                text = { Text(item.symbol.orEmpty()) },
                                 onClick = {
                                     sharedViewModel.onEvent(SharedEvent.CryptoOptionChanged(item))
                                     viewModel.onEvent(WalletEvent.CurrentOptionChanged(item))
@@ -208,56 +234,88 @@ fun WalletScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // ── NFT: segment selector ──────────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                "List of tokens",
-                style = MaterialTheme.typography.titleSmall.copy(color = Color.White)
-            )
-            Text(
-                "View All",
-                style = MaterialTheme.typography.titleSmall.copy(color = Color.White),
-                modifier = Modifier.clickable { /* TODO: Navigate to full token list */ }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        sharedState.dashboardResponse?.crypto?.let { crypt ->
-            sharedState.dashboardResponse?.marketSnapshot?.let { snaps ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(greyButtonBackground, MaterialTheme.shapes.medium)
-                        .clip(MaterialTheme.shapes.medium)
-                ) {
-                    crypt.forEachIndexed { index, token ->
-                        TokenRow(tokenInfo = token, index, snaps, viewModel)
-                        if (index < crypt.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 0.dp),
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                    }
-                }
+            WalletSegment.entries.forEach { item ->
+                AppGreyButton(
+                    labelColor = if (segment == item) Color.White else grey_9,
+                    label = item.label,
+                    onClick = { segment = item },
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
-
         Spacer(modifier = Modifier.height(16.dp))
+        // ──────────────────────────────────────────────────────────────────────
 
-        AppGreyButton(
-            labelColor = Color.White,
-            label = "+ Add Token",
-            onClick = { showDialog = true },
-            modifier = Modifier
-                .fillMaxWidth()
-        )
+        when (segment) {
+
+            WalletSegment.TOKENS -> {
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "List of tokens",
+                        style = MaterialTheme.typography.titleSmall.copy(color = Color.White)
+                    )
+                    Text(
+                        "View All",
+                        style = MaterialTheme.typography.titleSmall.copy(color = Color.White),
+                        modifier = Modifier.clickable { /* TODO: Navigate to full token list */ }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                sharedState.dashboardResponse?.crypto?.let { crypt ->
+                    sharedState.dashboardResponse?.marketSnapshot?.let { snaps ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(greyButtonBackground, MaterialTheme.shapes.medium)
+                                .clip(MaterialTheme.shapes.medium)
+                        ) {
+                            crypt.forEachIndexed { index, token ->
+                                TokenRow(tokenInfo = token, index, snaps, viewModel)
+                                if (index < crypt.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 0.dp),
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                AppGreyButton(
+                    labelColor = Color.White,
+                    label = "+ Add Token",
+                    onClick = { showDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                )
+            }
+
+            // ── NFT: holdings grid ─────────────────────────────────────────────
+            WalletSegment.NFTS -> NftHoldingsSection(
+                state = nftState,
+                onEvent = nftViewModel::onEvent,
+                modifier = Modifier.fillMaxWidth()
+            )
+            // ───────────────────────────────────────────────────────────────────
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -296,16 +354,6 @@ fun WalletScreen(
                                 state.selectedTokenId?.let {
 
                                     when (title) {
-                                        "Buy Crypto with Card" -> {
-                                            navController.navigate(
-                                                Screen.AppNavScreens.DepositViaCard(
-                                                    token = Json.encodeToString(
-                                                        it
-                                                    )
-                                                )
-                                            )
-                                        }
-
                                         "Deposit (On-chain)" -> {
                                             navController.navigate(
                                                 Screen.AppNavScreens.Deposit(
@@ -320,7 +368,7 @@ fun WalletScreen(
                                             navController.navigate(Screen.AppNavScreens.Pay)
                                         }
 
-                                        else -> {
+                                        "Withdraw (On-chain)" -> if (BuildConfig.FEATURE_ONCHAIN_WITHDRAW) {
                                             navController.navigate(
                                                 Screen.AppNavScreens.Withdraw(
                                                     token = Json.encodeToString(
@@ -328,7 +376,11 @@ fun WalletScreen(
                                                     )
                                                 )
                                             )
+                                        } else {
+                                            Unit
                                         }
+
+                                        else -> Unit
                                     }
                                 }
                             }
@@ -355,15 +407,6 @@ private fun SecureWalletSheetContent(onGotItClick: (title: String) -> Unit) {
             .verticalScroll(rememberScrollState()), // In case content is long
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-//        Spacer(modifier = Modifier.height(8.dp)) // Space after drag handle
-//        RowBottomSheet(
-//            iconRes = R.drawable.ic_usdt_icon,
-//            title = "Buy Crypto with Card",
-//            subTitle = "Instantly purchase crypto using your Visa or MasterCard. Funds arrive in your wallet via on-chain transfer.",
-//            onItemClick = {
-//                onGotItClick(it)
-//            }
-//        )
         Spacer(modifier = Modifier.height(8.dp))
         RowBottomSheet(
             iconRes = R.drawable.ic_usdt_icon,
@@ -373,15 +416,18 @@ private fun SecureWalletSheetContent(onGotItClick: (title: String) -> Unit) {
                 onGotItClick(it)
             }
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        RowBottomSheet(
-            iconRes = R.drawable.ic_usdt_icon,
-            title = "Withdraw (On-chain)",
-            subTitle = "Send tokens from your wallet to any valid on-chain address securely and quickly.",
-            onItemClick = {
-                onGotItClick(it)
-            }
-        )
+        // Hidden: the payout is funded by the merchant account, not by the user's balance.
+        if (BuildConfig.FEATURE_ONCHAIN_WITHDRAW) {
+            Spacer(modifier = Modifier.height(8.dp))
+            RowBottomSheet(
+                iconRes = R.drawable.ic_usdt_icon,
+                title = "Withdraw (On-chain)",
+                subTitle = "Send tokens from your wallet to any valid on-chain address securely and quickly.",
+                onItemClick = {
+                    onGotItClick(it)
+                }
+            )
+        }
 //        Spacer(modifier = Modifier.height(8.dp))
 //        RowBottomSheet(
 //            iconRes = R.drawable.ic_usdt_icon,
@@ -480,7 +526,7 @@ private fun TokenRow(
 
         // Token Name
         Text(
-            tokenInfo.symbol,
+            tokenInfo.symbol.orEmpty(),
             style = MaterialTheme.typography.titleSmall.copy(color = Color.White),
             modifier = Modifier.weight(1f)
         )
@@ -496,11 +542,15 @@ private fun TokenRow(
                 tokenInfo.formattedBalance,
                 style = MaterialTheme.typography.titleSmall.copy(color = Color.White)
             )
-            Text(
-                text = if (marketSnapshot[index].changePct > 0) "+ " + marketSnapshot[index].changePct + "%" else
-                    marketSnapshot[index].changePct.toString() + "%",
-                style = MaterialTheme.typography.labelSmall.copy(color = if (marketSnapshot[index].changePct > 0) receivedAmountTextColor else sendAmountTextColor)
-            )
+            // Match by symbol; the index is only a fallback, since the two lists can differ in length.
+            val snapshot = marketSnapshot.firstOrNull { it.symbol.equals(tokenInfo.symbol, ignoreCase = true) }
+                ?: marketSnapshot.getOrNull(index)
+            snapshot?.let {
+                Text(
+                    text = if (it.changePct > 0) "+ " + it.changePct + "%" else it.changePct.toString() + "%",
+                    style = MaterialTheme.typography.labelSmall.copy(color = if (it.changePct > 0) receivedAmountTextColor else sendAmountTextColor)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -514,4 +564,3 @@ private fun TokenRow(
         )
     }
 }
-

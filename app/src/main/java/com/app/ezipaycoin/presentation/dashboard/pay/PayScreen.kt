@@ -48,7 +48,9 @@ import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -58,6 +60,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import com.app.ezipaycoin.config.Feature
+import com.app.ezipaycoin.config.FeatureFlags
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -83,6 +87,10 @@ import androidx.compose.ui.unit.times
 import androidx.navigation.NavController
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
+import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
+import com.app.ezipaycoin.utils.validation.AmountValidator
+import java.math.BigDecimal
+import java.math.RoundingMode
 import com.app.ezipaycoin.data.remote.dto.response.TransactionsResponse
 import com.app.ezipaycoin.presentation.shared.SharedEvent
 import com.app.ezipaycoin.presentation.shared.SharedState
@@ -127,14 +135,19 @@ fun PayScreen(
             .fillMaxSize()
         // .verticalScroll(rememberScrollState()) // Scroll handled by LazyColumn in DirectPay
     ) {
-        PaySegmentedControl(
-            selectedTab = state.selectedTab,
-            onTabSelected = { viewModel.onEvent(PayEvent.TabChanged(it)) },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
-        )
+        // Utilities has no backend; without it there is one tab, so no switcher.
+        val utilitiesEnabled = Feature.PAY_UTILITIES in FeatureFlags.enabled.collectAsState().value
+        val activeTab = if (utilitiesEnabled) state.selectedTab else PayScreenTab.DirectPay
+        if (utilitiesEnabled) {
+            PaySegmentedControl(
+                selectedTab = state.selectedTab,
+                onTabSelected = { viewModel.onEvent(PayEvent.TabChanged(it)) },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+            )
+        }
 
         Box(modifier = Modifier.weight(8.7f)) {
-            when (state.selectedTab) {
+            when (activeTab) {
                 PayScreenTab.DirectPay -> DirectPayContent(
                     viewModel,
                     state,
@@ -248,7 +261,7 @@ private fun DirectPayContent(
                 trailingIcon = {
                     Icon(
                         Icons.Filled.ContentPaste,
-                        contentDescription = "Search",
+                        contentDescription = "Paste address",
                         tint = Color.White.copy(alpha = 0.5f),
                         modifier = Modifier
                             .size(20.dp)
@@ -261,7 +274,7 @@ private fun DirectPayContent(
             state.toAddressError?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.titleSmall.copy(color = TextHintColor),
+                    style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.error),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 4.dp, top = 4.dp)
@@ -385,15 +398,16 @@ private fun RecentPayeesSection(
             } else if (state.responseState is ResponseState.Success) {
                 val data =
                     (state.responseState as ResponseState.Success<BaseResponse<TransactionsResponse>>).data.apiData
-                if (data.items.isEmpty()) {
+                val payees = recentPayees(data.items, vm.ownAddressOrNull())
+                if (payees.isEmpty()) {
                     Text(
-                        "No Transactions Found!!",
+                        "No recent payees yet",
                         style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
                     )
                 } else {
-                    data.items.forEachIndexed { index, payee ->
+                    payees.forEachIndexed { index, payee ->
                         RecentPayeeItem(item = payee)
-                        if (index < data.items.lastIndex) {
+                        if (index < payees.lastIndex) {
                             HorizontalDivider(
                                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                 modifier = Modifier.padding(start = 0.dp)
@@ -443,7 +457,7 @@ fun RecentPayeeItem(item: TransactionsResponse.TransactionsItem) {
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                item.to.shortenAddress(),
+                item.to.orEmpty().shortenAddress(),
                 maxLines = 1,
                 modifier = Modifier.padding(end = 8.dp),
                 style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor)
@@ -459,11 +473,7 @@ fun RecentPayeeItem(item: TransactionsResponse.TransactionsItem) {
             )
         }
         Text(
-            text = if (item.type.equals(
-                    "send",
-                    true
-                )
-            ) "-" + item.formattedAmount else "+" + item.formattedAmount,
+            text = item.amountLabel,
             style = MaterialTheme.typography.titleMedium.copy(
                 color = if (item.type.equals(
                         "send",
@@ -601,6 +611,14 @@ private fun UtilityGridItem(item: UtilityItemData, isSelected: Boolean, onClick:
     }
 }
 
+/** Fiat value of [amount] of the selected token, from the dashboard's fiatValue/balance ratio. */
+private fun fiatEquivalent(crypto: DashboardResponse.Crypto?, amount: String): String? {
+    if (crypto == null || crypto.balance <= 0.0) return null
+    val value = AmountValidator.parse(amount) ?: return null
+    val ratio = BigDecimal.valueOf(crypto.fiatValue).divide(BigDecimal.valueOf(crypto.balance), 18, RoundingMode.HALF_UP)
+    return value.multiply(ratio).setScale(2, RoundingMode.HALF_UP).toPlainString()
+}
+
 @Composable
 private fun PaymentDetailsSection(
     vm: PayViewModel,
@@ -633,7 +651,7 @@ private fun PaymentDetailsSection(
             ) {
                 sharedState.dashboardResponse?.crypto?.forEach { item ->
                     DropdownMenuItem(
-                        text = { Text(item.symbol) },
+                        text = { Text(item.symbol.orEmpty()) },
                         onClick = {
                             sharedViewModel.onEvent(SharedEvent.CryptoOptionChanged(item))
                             vm.onEvent(PayEvent.CurrentOptionChanged(item))
@@ -656,10 +674,8 @@ private fun PaymentDetailsSection(
                 horizontalArrangement = Arrangement.End
             ) {
                 Text(
-                    "$",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = TextPrimaryColor
-                    )
+                    sharedState.selectedCrypto?.symbol.orEmpty(),
+                    style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor)
                 )
                 Spacer(Modifier.width(4.dp))
                 TextField(
@@ -703,10 +719,22 @@ private fun PaymentDetailsSection(
 //            }
         }
 
+        val fiatEstimate = fiatEquivalent(sharedState.selectedCrypto, state.amount)
+        if (fiatEstimate != null) {
+            Text(
+                text = "\u2248 $" + fiatEstimate,
+                style = MaterialTheme.typography.bodySmall.copy(color = TextHintColor),
+                textAlign = TextAlign.End,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 4.dp, top = 4.dp)
+            )
+        }
+
         state.amountError?.let {
             Text(
                 text = it,
-                style = MaterialTheme.typography.titleSmall.copy(color = TextHintColor),
+                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.error),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 4.dp, top = 4.dp)
@@ -772,6 +800,28 @@ private fun SlideToPayButtonSection(
             modifier = Modifier.align(Alignment.Center) // Center the helper text
         )
 
+        state.confirmation?.let { c ->
+            AlertDialog(
+                onDismissRequest = { vm.onEvent(PayEvent.CancelConfirmation) },
+                title = { Text("Confirm payment") },
+                text = {
+                    Column {
+                        Text("Send ${c.amount} ${c.symbol}")
+                        Spacer(Modifier.height(8.dp))
+                        Text("To: ${c.to}")
+                        Spacer(Modifier.height(8.dp))
+                        Text("Estimated network fee: ${c.feeBnb} BNB")
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { vm.onEvent(PayEvent.ConfirmPayment) }) { Text("Confirm") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { vm.onEvent(PayEvent.CancelConfirmation) }) { Text("Cancel") }
+                }
+            )
+        }
+
         when (state.payMoneyResponse) {
             is ResponseState.Loading -> {
                 CircularProgressIndicator(
@@ -829,7 +879,6 @@ private fun SlideToPayButtonSection(
                     // This is a simplified click, a real slide would use draggable
                     if (offsetX > 150f) { // Arbitrary threshold for "slide completion"
                         /* TODO: Execute Payment */
-                        println("Payment Executed (Simplified)")
                         offsetX = 0f // Reset
                     }
                 }
@@ -847,7 +896,15 @@ private fun SlideToPayButtonSection(
                         if (offsetX > 450f) {
                             if (state.payMoneyResponse !== ResponseState.Loading && state.selectedTab == PayScreenTab.DirectPay) {
                                 sharedState.selectedCrypto?.symbol?.let {
-                                    vm.onEvent(PayEvent.PayAmount(it))
+                                    val coins = sharedState.dashboardResponse?.crypto
+                                    vm.onEvent(
+                                        PayEvent.PayAmount(
+                                            crypto = it,
+                                            contractAddress = sharedState.selectedCrypto?.contractAddress,
+                                            tokenBalance = sharedState.selectedCrypto?.balance,
+                                            bnbBalance = coins?.firstOrNull { c -> c.symbol.equals("BNB", true) }?.balance
+                                        )
+                                    )
                                 }
                             }
                             offsetX = 0f

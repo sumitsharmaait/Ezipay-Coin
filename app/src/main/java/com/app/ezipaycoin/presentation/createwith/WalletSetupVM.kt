@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.createwith
 
 import android.util.Log
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
@@ -11,6 +12,7 @@ import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SessionManager
 import com.app.ezipaycoin.utils.WalletManager
 import com.app.ezipaycoin.utils.WalletManager.signNonceWithTrustWalletCore
+import com.app.ezipaycoin.config.FirebaseAvailability
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +43,12 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
                 getNonce(wallet, event.name, event.email, event.profilePic)
             }
 
+            is WalletSetupEvent.SocialDetailsUnavailable -> {
+                _uiState.update {
+                    it.copy(responseState = ResponseState.Error(event.message))
+                }
+            }
+
             is WalletSetupEvent.DismissDialog -> {
                 _uiState.update {
                     it.copy(responseState = ResponseState.Idle)
@@ -67,10 +75,11 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
             }
             try {
                 var token = ""
-                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        token = task.result
-                        Log.d("FCM", "Current token: $token")
+                if (FirebaseAvailability.isAvailable) {
+                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            token = task.result
+                        }
                     }
                 }
                 val privateKey = wallet.getKeyForCoin(CoinType.ETHEREUM)
@@ -84,21 +93,10 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
                         val updateProfileRes =
                             repository.updateProfile(UpdateProfileRequest(name, email))
                         if (updateProfileRes.apiStatus) {
-                            val dataStore = UserPreferencesRepository.userPreferencesFlow
-                            dataStore.updateData { prefs ->
-                                prefs.copy(
-                                    isWalletCreated = true,
-                                    walletAddress = address,
-                                    walletPrivateKey = privateKey.data()
-                                        .toHexString(format = HexFormat.Default),
-                                    nonce = res.apiData.nonce,
-                                    token = loginRes.apiData.token,
-                                    userName = name,
-                                    userEmail = email,
-                                    userProfile = loginRes.apiData.user.profilePic ?: pic,
-                                    seedPhrase = wallet.mnemonic()
-                                )
-                            }
+                            // Nothing is stored yet. The wallet stays in memory until the user has set a
+                            // password and confirmed the seed phrase; ConfirmSeedPhraseViewModel then
+                            // encrypts and persists it.
+                            WalletManager.pendingProfilePic = loginRes.apiData.user.profilePic ?: pic
                             _uiState.update {
                                 it.copy(
                                     responseState = ResponseState.Success(res)
@@ -113,6 +111,10 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
                                     )
                                 )
                             }
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(responseState = ResponseState.Error(loginRes.apiMessage))
                         }
                     }
 
@@ -129,7 +131,7 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
                 _uiState.update {
                     it.copy(
                         responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }

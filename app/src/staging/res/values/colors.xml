@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Staging launcher icon background (production uses black). -->
+    <color name="ic_launcher_background_staging">#FF8C00</color>
+</resources>

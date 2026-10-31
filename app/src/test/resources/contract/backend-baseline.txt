@@ -1,0 +1,99 @@
+# Routes and request DTOs the backend promises, copied from
+# Ezipay-Coin-Backend-API/server/EzipayCoin.Tests/Contract/contract-baseline.txt (backend dev).
+# Only the route column of each line, and the DTOs the app sends. Refresh by re-copying; do not hand-edit.
+# Format: '<METHOD> <path>' or 'DTO <Name> | <Field>:<Type>,...'.
+DELETE /api/v1/Content/banners/{id:int}
+DELETE /api/v1/Users/me
+DELETE /api/v1/learn/delete/{id}
+GET /api/v1/App/config
+GET /api/v1/Auth/logout
+GET /api/v1/Auth/nonce
+GET /api/v1/Auth/refresh
+GET /api/v1/Content/banners
+GET /api/v1/Content/banners/{id:int}
+GET /api/v1/Dashboard
+GET /api/v1/Earn/checkin
+GET /api/v1/Earn/checkin/status
+GET /api/v1/Earn/checkin/tasks
+GET /api/v1/Earn/summary
+GET /api/v1/Health
+GET /api/v1/Health/database
+GET /api/v1/Health/live
+GET /api/v1/Health/ready
+GET /api/v1/Health/services
+GET /api/v1/Kyc/status
+GET /api/v1/Nft/collection
+GET /api/v1/Nft/holdings/{owner}
+GET /api/v1/Nft/token/{tokenId:long}
+GET /api/v1/Notification
+GET /api/v1/Notification/unread-count
+GET /api/v1/Users/keystore
+GET /api/v1/Users/me
+GET /api/v1/VirtualCard/createCard
+GET /api/v1/VirtualCard/createWallet
+GET /api/v1/VirtualCard/getCountries
+GET /api/v1/VirtualCard/getDocumentTypes
+GET /api/v1/VirtualCard/kyc
+GET /api/v1/VirtualCard/onboardingProgress
+GET /api/v1/Wallet/Transaction
+GET /api/v1/Wallet/balances
+GET /api/v1/WebhookAlchemy/ListWebhooks
+GET /api/v1/WebhookMoralis/CreateStream
+GET /api/v1/WebhookMoralis/ListStreamsList
+GET /api/v1/earn/Staking/my
+GET /api/v1/earn/Staking/pools
+GET /api/v1/learn
+GET /api/v1/learn/{id}
+GET /api/v1/token
+GET /api/v1/tokens
+POST /api/v1/Auth/fcmtoken
+POST /api/v1/Auth/login
+POST /api/v1/Content/banners
+POST /api/v1/Earn/Claim
+POST /api/v1/Earn/checkin/tasks/{taskId}/complete
+POST /api/v1/Kyc/submit
+POST /api/v1/Master/getCurrency
+POST /api/v1/Master/getLanguage
+POST /api/v1/Nft/mint/allowlist
+POST /api/v1/Nft/mint/public
+POST /api/v1/Payments/CardTxn
+POST /api/v1/Payments/CryptoPayinDeposittoken
+POST /api/v1/Payments/CryptoPayinTransactionStatusCheck
+POST /api/v1/Payments/CryptoPayoutTransactionStatusCheck
+POST /api/v1/Payments/CryptoPayoutTransfertoken
+POST /api/v1/Payments/NetworkInfobyTokenId
+POST /api/v1/Users/ProfilePicUpload
+POST /api/v1/Users/UpdateProfile
+POST /api/v1/Users/keystore
+POST /api/v1/VirtualCard/createUser
+POST /api/v1/VirtualCard/updateAddress
+POST /api/v1/VirtualCard/updateUser
+POST /api/v1/Wallet/Transactions
+POST /api/v1/Wallet/Transfer
+POST /api/v1/Wallet/TransferToken
+POST /api/v1/Webhook/ReceiveWebhook
+POST /api/v1/WebhookAlchemy/AddAddresses
+POST /api/v1/WebhookAlchemy/CreateWebhook
+POST /api/v1/WebhookAlchemy/ReceiveWebhook
+POST /api/v1/WebhookAlchemy/RemoveAddresses
+POST /api/v1/WebhookAlchemy/SyncAddresses
+POST /api/v1/WebhookMoralis/AddAddresses
+POST /api/v1/WebhookMoralis/ReceiveWebhook
+POST /api/v1/WebhookMoralis/RemoveAddresses
+POST /api/v1/earn/Staking/claim/prepare
+POST /api/v1/earn/Staking/stake/prepare
+POST /api/v1/earn/Staking/tx/confirm
+POST /api/v1/earn/Staking/tx/{txHash}/status
+POST /api/v1/earn/Staking/unstake/prepare
+POST /api/v1/learn/create
+PUT /api/v1/Content/banners/{id:int}
+PUT /api/v1/Notification/read-all
+PUT /api/v1/Notification/{id}/read
+PUT /api/v1/Users/me
+PUT /api/v1/learn/update
+DTO KycSubmitRequestDTO | AddressLine:String,BackImage:IFormFile?,City:String,ConsentAccepted:Boolean,Country:String,DateOfBirth:String,DocumentNumber:String,DocumentTypeId:String,FrontImage:IFormFile,FullName:String,LivenessEnabled:Boolean,LivenessVerified:Boolean,Nationality:String,PostalCode:String,ProofOfAddress:IFormFile?,Selfie:IFormFile,Video:IFormFile?
+DTO LoginInputDTO | DeviceId:String?,PublicKey:String,Signature:String
+DTO MintAllowlistRequestDTO | Proof:List<String>,Quantity:Int32
+DTO MintRequestDTO | Quantity:Int32
+DTO TransactionFilterRequestDTO | Chain:String,FromDate:Nullable<DateTime>?,Page:Int32,Size:Int32,ToDate:Nullable<DateTime>?,Type:String
+DTO UpdateProfileInfo | Email:String?,Name:String?

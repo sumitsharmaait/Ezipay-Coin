@@ -85,6 +85,8 @@ fun Deposit(
                 msg = (state.walletInfoResponse as ResponseState.Error).message
             ) {
                 viewModel.onEvent(DepositeEvent.DismissDialog(0))
+                // Nothing else to show without an address, so leave instead of a blank screen.
+                navController.popBackStack()
             }
         }
 

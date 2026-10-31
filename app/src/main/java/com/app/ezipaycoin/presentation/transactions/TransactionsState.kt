@@ -12,6 +12,6 @@ data class TransactionsState(
     var scrollbarSize: IntSize = IntSize.Zero,
     var isLoading: Boolean = false,
     var canLoadMore: Boolean = true,
-    var currentPage: Int = 1,
+    var currentPage: Int = AllTransactionsViewModel.FIRST_PAGE,
     var transactionsList: List<TransactionsResponse.TransactionsItem> = emptyList()
 )

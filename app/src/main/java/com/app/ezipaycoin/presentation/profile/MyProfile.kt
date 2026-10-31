@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,8 +48,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.app.ezipaycoin.config.ChainConfig
+import com.app.ezipaycoin.config.Feature
+import com.app.ezipaycoin.config.FeatureFlags
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +96,7 @@ fun MyProfile(
 
     val state by viewModel.uiState.collectAsState()
     val context: Context = LocalContext.current
+    var showChainDialog by remember { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -231,27 +240,47 @@ fun MyProfile(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            val settings = listOf(
-                SettingItem(
-                    Icons.Filled.WorkspacePremium,
-                    "VIP Privilege",
-                    "Regular"
-                ) { /* TODO */ },
-                SettingItem(
-                    Icons.Filled.PersonOutline,
-                    "Verifications",
-                    "Pending",
-                ) { /* TODO */ },
-                SettingItem(
-                    Icons.Filled.Shield,
-                    "Security"
-                ) { navController.navigate(Screen.AppNavScreens.WalletDetails) },
-                SettingItem(
-                    Icons.Filled.Close,
-                    "Twitter",
-                    "Pending"
-                ) { /* TODO */ } // Assuming X is Twitter
-            )
+            // Rows without a working destination (VIP, verifications, Twitter) and KYC, whose
+            // backend route is off, are shown only when their feature is enabled.
+            val enabled by FeatureFlags.enabled.collectAsState()
+            val developerMode by FeatureFlags.developerMode.collectAsState()
+            val settings = buildList {
+                if (Feature.PROFILE_PLACEHOLDERS in enabled) {
+                    add(SettingItem(Icons.Filled.WorkspacePremium, "VIP Privilege", "Regular") { })
+                    add(SettingItem(Icons.Filled.PersonOutline, "Verifications", "Pending") { })
+                }
+                if (Feature.KYC in enabled) {
+                    add(SettingItem(Icons.Filled.PersonOutline, "KYC Upload", "Pending") {
+                        navController.navigate(Screen.AppNavScreens.KycUpload)
+                    })
+                }
+                add(SettingItem(Icons.Filled.Shield, "Security") {
+                    navController.navigate(Screen.AppNavScreens.WalletDetails)
+                })
+                add(SettingItem(Icons.Filled.Close, "Delete account") {
+                    navController.navigate(Screen.AppNavScreens.DeleteAccount)
+                })
+                if (Feature.PROFILE_PLACEHOLDERS in enabled) {
+                    add(SettingItem(Icons.Filled.Close, "Twitter", "Pending") { })
+                }
+                // Debug, staging and UAT builds only: which chain the app signs for (applies after a restart).
+                if (ChainConfig.switchable) {
+                    add(
+                        SettingItem(Icons.Filled.SwapHoriz, "Network", ChainConfig.current.label) {
+                            showChainDialog = true
+                        }
+                    )
+                }
+                if (FeatureFlags.developerModeAvailable) {
+                    add(
+                        SettingItem(
+                            Icons.Filled.Shield,
+                            "Developer: show unfinished features",
+                            if (developerMode) "On" else "Off"
+                        ) { FeatureFlags.setDeveloperMode(!developerMode) }
+                    )
+                }
+            }
 
             Column(
                 modifier = Modifier
@@ -281,6 +310,21 @@ fun MyProfile(
                     .padding(bottom = 20.dp, top = 8.dp)
             )
 
+        }
+        if (showChainDialog) {
+            ChainSwitchDialog(
+                onDismiss = { showChainDialog = false },
+                onRestart = {
+                    showChainDialog = false
+                    val intent = Intent(context, MainActivity::class.java).addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    )
+                    context.startActivity(intent)
+                    (context as? Activity)?.finish()
+                    // A new process, so every client is built for the chosen chain.
+                    Runtime.getRuntime().exit(0)
+                }
+            )
         }
         if (state.logoutResponseState is ResponseState.Loading) {
             Box(

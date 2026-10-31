@@ -16,7 +16,6 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.School
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.ui.composables.BottomNavItem
-import com.google.firebase.FirebaseApp
 
 class App : Application() {
 
@@ -31,10 +30,14 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        FirebaseApp.initializeApp(this)
+        // Before anything builds a client: the chain chosen in Profile (debug, staging and UAT) applies from start-up.
+        com.app.ezipaycoin.config.ChainConfig.init(this)
+        // Starts Firebase when this build has a config for its application id; otherwise push and social sign-in stay off.
+        com.app.ezipaycoin.config.FirebaseAvailability.init(this)
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         System.loadLibrary("TrustWalletCore")
         UserPreferencesRepository.init(this)
+        com.app.ezipaycoin.config.FeatureFlags.init(this)
     }
 
     val items = listOf(

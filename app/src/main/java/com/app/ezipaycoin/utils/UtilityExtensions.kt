@@ -15,6 +15,10 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 
+import android.net.Uri
+import java.io.File
+import java.io.FileOutputStream
+
 fun String.shortenAddress(prefixLength: Int = 7, suffixLength: Int = 5): String {
     if (this.length <= prefixLength + suffixLength) return this
     return "${this.take(prefixLength)}...${this.takeLast(suffixLength)}"
@@ -60,6 +64,24 @@ fun String.formatExpiry(input: String): String {
     return when {
         digits.length <= 2 -> digits
         else -> digits.substring(0, 2) + "/" + digits.substring(2)
+    }
+}
+
+fun Context.uriToTempFilePath(uri: Uri): String? {
+    return try {
+        val inputStream = contentResolver.openInputStream(uri) ?: return null
+        val extension = contentResolver.getType(uri)
+            ?.substringAfterLast('/')
+            ?.takeIf { it.isNotBlank() } ?: "jpg"
+        val file = File(cacheDir, "kyc_${System.currentTimeMillis()}.$extension")
+        inputStream.use { input ->
+            FileOutputStream(file).use { output ->
+                input.copyTo(output)
+            }
+        }
+        file.absolutePath
+    } catch (e: Exception) {
+        null
     }
 }
 

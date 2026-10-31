@@ -1,9 +1,11 @@
 package com.app.ezipaycoin.utils
 
+import com.app.ezipaycoin.config.ChainConfig
 import wallet.core.jni.Curve
 import wallet.core.jni.HDWallet
 import wallet.core.jni.Hash
 import wallet.core.jni.PrivateKey
+import wallet.core.jni.CoinType
 
 object WalletManager {
 
@@ -13,6 +15,19 @@ object WalletManager {
         get() = _wallet ?: throw IllegalStateException("Wallet not initialized.")
 
     fun isInitialized(): Boolean = _wallet != null
+
+    /** Photo URL from a social sign-up, held until the wallet is persisted after the seed backup. */
+    var pendingProfilePic: String? = null
+
+    /** BSC receive address, or null when the wallet isn't unlocked yet. */
+    val address: String?
+        get() = _wallet?.getAddressForCoin(CoinType.SMARTCHAIN)
+
+    /** Drops the in-memory wallet and anything held for a sign-up in progress. */
+    fun clear() {
+        _wallet = null
+        pendingProfilePic = null
+    }
 
     fun createNewWallet(): HDWallet {
         val wallet = HDWallet(128, "")
@@ -72,13 +87,12 @@ object WalletManager {
         return "$randomPart$suffix"
     }
 
-    //const val EZPT_TOKEN_CONTRACT: String = "0xCe135658a2E4db9F503B7922E2429c37d9d21DFc" //test net
-    const val EZPT_TOKEN_CONTRACT: String = "0x50387a24253150e808875f3cac8111546623ba64" // main net
+    // The chain of this process (config/ChainConfig.kt): the build type's chain, or the one picked
+    // in Profile on debug, staging and UAT builds.
+    val EZPT_TOKEN_CONTRACT: String get() = ChainConfig.current.ezptTokenContract
 
-    //const val USDT_TOKEN_CONTRACT: String = "0x59691E19c4f159BdB1c1eDee5EB2616f8805F27B" //test net
-    const val USDT_TOKEN_CONTRACT: String = "0x55d398326f99059fF775485246999027B3197955" //main net
+    val USDT_TOKEN_CONTRACT: String get() = ChainConfig.current.usdtTokenContract
 
-    //const val CHAIN_ID = 97L //test net
-    const val CHAIN_ID = 56L //main net
+    val CHAIN_ID: Long get() = ChainConfig.current.chainId
 
 }

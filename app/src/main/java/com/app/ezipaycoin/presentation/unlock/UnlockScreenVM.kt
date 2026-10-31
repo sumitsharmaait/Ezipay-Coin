@@ -7,10 +7,13 @@ import com.app.ezipaycoin.data.remote.dto.UserPreferences
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.domain.repository.AuthRepository
+import com.app.ezipaycoin.utils.FcmToken
+import com.app.ezipaycoin.utils.PasswordCredentials
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SessionManager
 import com.app.ezipaycoin.utils.WalletManager.signNonceWithTrustWalletCore
-import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +47,15 @@ class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
             }
         }
 
+    }
+
+    /** Clears the typed password and any previous result when the app locks again. */
+    fun reset() {
+        _uiState.update { UnlockState(bioAuthEnabled = it.bioAuthEnabled) }
+        viewModelScope.launch {
+            dataStoreData = dataStore.data.first()
+            _uiState.update { it.copy(bioAuthEnabled = dataStoreData?.bioMetricAuthEnabled == true) }
+        }
     }
 
     fun onEvent(event: UnlockScreenEvent) {
@@ -82,67 +94,77 @@ class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
             }
 
             try {
-                var token = ""
-                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        token = task.result
-                        Log.d("FCM", "Current token: $token")
-                    }
-                }
-                dataStoreData?.walletAddress?.let { wallet ->
-                    val res = repository.getNonce(wallet)
-                    if (res.apiStatus) {
-                        val signatureHex = signNonceWithTrustWalletCore(
-                            res.apiData.nonce,
-                            PrivateKey(
-                                dataStoreData?.walletPrivateKey?.removePrefix("0x")
-                                    ?.hexToByteArray()
-                            )
-                        )
-                        val loginRes =
-                            repository.postLogin(LoginRequest(wallet, signatureHex, token))
-                        if (loginRes.apiStatus) {
-                            SessionManager.token = loginRes.apiData.token
-                            dataStore.updateData { pref ->
-                                pref.copy(
-                                    token = loginRes.apiData.token,
-                                    userProfile = loginRes.apiData.user.profilePic
-                                        ?: dataStoreData?.userProfile
-                                )
-                            }
-                            _uiState.update {
-                                it.copy(
-                                    responseState = ResponseState.Success(loginRes)
-                                )
-                            }
-                            _eventFlow.emit(UnlockScreenVMEvent.Unlocked)
-                        }
-                    }
-
+                val wallet = dataStoreData?.walletAddress
+                val privateKey = dataStoreData?.walletPrivateKey
+                if (dataStoreData?.isWalletCreated != true || wallet == null || privateKey == null) {
+                    // Password was saved but wallet setup never finished; unlock so the
+                    // Auth graph can take the user back through setup.
+                    _uiState.update { it.copy(responseState = ResponseState.Idle) }
+                    _eventFlow.emit(UnlockScreenVMEvent.Unlocked)
+                    return@launch
                 }
 
-
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
-                        )
+                val token = fetchFcmToken()
+                val res = repository.getNonce(wallet)
+                if (!res.apiStatus) {
+                    showError(res.apiMessage)
+                    return@launch
+                }
+                val signatureHex = signNonceWithTrustWalletCore(
+                    res.apiData.nonce,
+                    PrivateKey(privateKey.removePrefix("0x").hexToByteArray())
+                )
+                val loginRes = repository.postLogin(LoginRequest(wallet, signatureHex, token))
+                if (!loginRes.apiStatus) {
+                    showError(loginRes.apiMessage)
+                    return@launch
+                }
+                SessionManager.token = loginRes.apiData.token
+                dataStore.updateData { pref ->
+                    pref.copy(
+                        token = loginRes.apiData.token,
+                        userProfile = loginRes.apiData.user.profilePic
+                            ?: dataStoreData?.userProfile
                     )
                 }
+                _uiState.update {
+                    it.copy(
+                        responseState = ResponseState.Success(loginRes)
+                    )
+                }
+                _eventFlow.emit(UnlockScreenVMEvent.Unlocked)
+            } catch (e: Exception) {
+                showError(if (com.app.ezipaycoin.utils.UserMessages.isParseError(e)) com.app.ezipaycoin.utils.UserMessages.UNEXPECTED_RESPONSE else e.localizedMessage)
             }
 
         }
 
     }
 
+    private fun showError(message: String?) {
+        _uiState.update {
+            it.copy(
+                responseState = ResponseState.Error(
+                    message?.takeIf { msg -> msg.isNotBlank() } ?: "Unable to unlock. Please try again."
+                )
+            )
+        }
+    }
+
+    /** Waits for the FCM token; login still proceeds without one (also when Firebase is off). */
+    private suspend fun fetchFcmToken(): String = FcmToken.fetch()
+
     private fun verifyPassword() {
         viewModelScope.launch {
-            dataStoreData?.password?.let {
-                if (it.contentEquals(_uiState.value.password)) {
-                    postLogin()
-                    return@launch
-                }
+            _uiState.update { it.copy(passwordError = "") }
+            // Read again: the stored record may have been migrated since this screen was created.
+            val prefs = dataStore.data.first()
+            dataStoreData = prefs
+            val entered = _uiState.value.password
+            val ok = withContext(Dispatchers.Default) { PasswordCredentials.matches(prefs, entered) }
+            if (ok) {
+                postLogin()
+                return@launch
             }
             _uiState.update {
                 it.copy(passwordError = "Incorrect password")

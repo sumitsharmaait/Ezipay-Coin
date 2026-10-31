@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.presentation.confirmseedphrase
 
+import com.app.ezipaycoin.utils.SecureScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +65,7 @@ fun ConfirmSeedPhraseScreen(
     viewModel: ConfirmSeedPhraseViewModel
 ) {
 
+    SecureScreen()
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     LaunchedEffect(key1 = context) {
@@ -93,6 +95,8 @@ fun ConfirmSeedPhraseScreen(
                     onClick = {
                         if (state.responseState is ResponseState.Success) {
                             navController.navigate(Screen.Auth.WalletSuccess)
+                        } else if (state.responseState is ResponseState.Error) {
+                            viewModel.retry()
                         }
                     },
                     modifier = Modifier

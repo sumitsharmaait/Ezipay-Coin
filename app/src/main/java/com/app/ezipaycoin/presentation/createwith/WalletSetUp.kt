@@ -58,14 +58,20 @@ import com.app.ezipaycoin.ui.theme.GoldAccentColor
 import com.app.ezipaycoin.ui.theme.GoldTextColor
 import com.app.ezipaycoin.ui.theme.OnboardingGold1
 import com.app.ezipaycoin.utils.ResponseState
+import com.app.ezipaycoin.utils.SocialProfile
 import com.facebook.AccessToken
 import com.facebook.CallbackManager
+import com.facebook.FacebookSdk
 import com.facebook.FacebookCallback
 import com.facebook.FacebookException
 import com.facebook.login.LoginManager
 import com.facebook.login.LoginResult
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.app.ezipaycoin.config.FeatureFlags
+import com.app.ezipaycoin.config.FirebaseAvailability
+import com.app.ezipaycoin.config.SocialSignInPolicy
+import com.app.ezipaycoin.utils.FacebookSignIn
 import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
@@ -92,23 +98,27 @@ fun WalletSetUp(
     }
 
 
-    val auth = FirebaseAuth.getInstance()
+    // FirebaseAuth needs the default FirebaseApp; builds without a Firebase config have none and hide social sign-in.
+    val firebaseAvailable = FirebaseAvailability.isAvailable
+    val auth = remember { if (firebaseAvailable) FirebaseAuth.getInstance() else null }
     val credentialManager = remember { CredentialManager.create(context) }
     val callbackManager = remember { CallbackManager.Factory.create() }
 
 
-    DisposableEffect(callbackManager) {
+    val enabledFeatures by FeatureFlags.enabled.collectAsState()
+    val showSocial = SocialSignInPolicy.showButtons(enabledFeatures, firebaseAvailable)
+
+    // The Facebook SDK starts on the first tap (see FacebookSignIn), so nothing is registered here.
+    fun startFacebookSignIn() {
+        val firebaseAuth = auth ?: return
+        FacebookSignIn.ensureInitialized(context)
         val loginManager = LoginManager.getInstance()
         loginManager.registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
             override fun onSuccess(result: LoginResult) {
-                Log.d("FacebookSignIn", "Facebook token: ${result.accessToken.token}")
                 handleFacebookAccessToken(
                     result.accessToken,
-                    auth,
-                    onSuccess = { name, email, pic ->
-                        Log.d("FacebookSignIn", "Success: $name, $email")
-                        viewModel.onEvent(WalletSetupEvent.SocialDetailsFetched(name, email, pic))
-                    })
+                    firebaseAuth,
+                    onResult = { viewModel.onEvent(it) })
             }
 
             override fun onCancel() {
@@ -119,12 +129,20 @@ fun WalletSetUp(
                 Log.e("FacebookSignIn", "Login error", error)
             }
         })
+        loginManager.logInWithReadPermissions(
+            context as Activity,
+            listOf("email", "public_profile")
+        )
+    }
+
+    DisposableEffect(callbackManager) {
         onDispose {
-            loginManager.unregisterCallback(callbackManager)
+            if (FacebookSdk.isInitialized()) LoginManager.getInstance().unregisterCallback(callbackManager)
         }
     }
 
     fun handleCredentialResponse(response: GetCredentialResponse) {
+        val firebaseAuth = auth ?: return
         val credential = response.credential
         if (credential is CustomCredential &&
             credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
@@ -132,20 +150,11 @@ fun WalletSetUp(
             val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
             val idToken = googleIdTokenCredential.idToken
             val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
-            auth.signInWithCredential(firebaseCredential)
+            firebaseAuth.signInWithCredential(firebaseCredential)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        auth.currentUser?.let {
-                            if (!it.displayName.isNullOrEmpty() && !it.email.isNullOrEmpty()) {
-                                viewModel.onEvent(
-                                    WalletSetupEvent.SocialDetailsFetched(
-                                        it.displayName!!,
-                                        it.email!!,
-                                        it.photoUrl.toString()
-                                    )
-                                )
-                                Log.d("GoogleSignIn", "Success: ${auth.currentUser?.displayName}")
-                            }
+                        firebaseAuth.currentUser?.let {
+                            viewModel.onEvent(socialEvent(it.displayName, it.email, it.photoUrl?.toString()))
                         }
                     } else {
                         Log.e("GoogleSignIn", "Firebase Auth failed", task.exception)
@@ -265,32 +274,29 @@ fun WalletSetUp(
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            // "Or Login with" Divider
-            OrLoginWithDivider()
+            if (showSocial) {
+                // "Or Login with" Divider
+                OrLoginWithDivider()
 
-            Spacer(modifier = Modifier.height(30.dp))
-            // Social Login Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly // Or Arrangement.spacedBy(16.dp)
-            ) {
-                SocialLoginButton(
-                    iconRes = R.drawable.sign_in_facebook,
-                    contentDescription = "Login with Facebook",
-                    onClick = {
-                        LoginManager.getInstance().logInWithReadPermissions(
-                            context as Activity,
-                            listOf("email", "public_profile")
-                        )
-                    }
-                )
-                SocialLoginButton(
-                    iconRes = R.drawable.sign_in_google,
-                    contentDescription = "Login with Google",
-                    onClick = {
-                        launchGoogleSignIn()
-                    }
-                )
+                Spacer(modifier = Modifier.height(30.dp))
+                // Social Login Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly // Or Arrangement.spacedBy(16.dp)
+                ) {
+                    SocialLoginButton(
+                        iconRes = R.drawable.sign_in_facebook,
+                        contentDescription = "Login with Facebook",
+                        onClick = { startFacebookSignIn() }
+                    )
+                    SocialLoginButton(
+                        iconRes = R.drawable.sign_in_google,
+                        contentDescription = "Login with Google",
+                        onClick = {
+                            launchGoogleSignIn()
+                        }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f)) // Push bottom content down
@@ -376,20 +382,25 @@ fun ClickableRegisterNowText() {
 }
 
 
+/** A usable account starts wallet creation; one without an email tells the user why nothing happened. */
+private fun socialEvent(displayName: String?, email: String?, photoUrl: String?): WalletSetupEvent =
+    when (val profile = SocialProfile.from(displayName, email, photoUrl)) {
+        is SocialProfile.Result.Ready ->
+            WalletSetupEvent.SocialDetailsFetched(profile.name, profile.email, profile.picture)
+        is SocialProfile.Result.Unusable -> WalletSetupEvent.SocialDetailsUnavailable(profile.message)
+    }
+
 private fun handleFacebookAccessToken(
     token: AccessToken,
     auth: FirebaseAuth,
-    onSuccess: (name: String, email: String, pic: String) -> Unit
+    onResult: (WalletSetupEvent) -> Unit
 ) {
     val credential = FacebookAuthProvider.getCredential(token.token)
     auth.signInWithCredential(credential)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 auth.currentUser?.let {
-                    if (!it.displayName.isNullOrEmpty() && !it.email.isNullOrEmpty()) {
-                        onSuccess(it.displayName!!, it.email!!, it.photoUrl.toString())
-                        Log.d("FacebookSignIn", "Success: ${auth.currentUser?.displayName}")
-                    }
+                    onResult(socialEvent(it.displayName, it.email, it.photoUrl?.toString()))
                 }
             } else {
                 Log.e("FacebookSignIn", "Firebase Auth failed", task.exception)

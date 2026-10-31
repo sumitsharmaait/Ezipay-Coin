@@ -38,10 +38,9 @@ sealed class Screen(val route: String) {
         @Serializable
         data object Unlock
 
+        /** The phrase to confirm is read from [com.app.ezipaycoin.utils.SeedHolder], not from route arguments. */
         @Serializable
-        data class SeedPhraseVerify(
-            val phrases: List<String>
-        )
+        data object SeedPhraseVerify
     }
 
     @Serializable
@@ -68,11 +67,6 @@ sealed class Screen(val route: String) {
         )
 
         @Serializable
-        data class DepositViaCard(
-            val token: String
-        )
-
-        @Serializable
         data class WebViewScreen(
             val url: String
         )
@@ -84,6 +78,24 @@ sealed class Screen(val route: String) {
 
         @Serializable
         data object WalletDetails
+
+        @Serializable
+        data object DeleteAccount
+
+        @Serializable
+        data object KycStatus
+
+        @Serializable
+        data object KycUpload
+
+        @Serializable
+        data object AddToken
+
+        @Serializable
+        data object NftMint
+
+        @Serializable
+        data class NftDetail(val tokenId: Long)
 
     }
 

@@ -1,5 +1,7 @@
 package com.app.ezipaycoin.presentation.importfromseed
 
+import androidx.compose.ui.text.input.ImeAction
+import com.app.ezipaycoin.utils.SecureScreen
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,18 +62,20 @@ import com.app.ezipaycoin.utils.BiometricHelper
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.pasteFromClipboard
 
+private val HorizontalScreenPadding = 20.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImportFromSeedScreen(
     navController: NavController,
     viewModel: ImportFromSeedViewModel
 ) {
+    SecureScreen()
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManger = LocalFocusManager.current
     val canUseBiometric = BiometricHelper.canAuthenticate(context)
-
 
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collect { event ->
@@ -85,35 +89,14 @@ fun ImportFromSeedScreen(
 
     Scaffold(
         containerColor = AppBackgroundColor,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Import From Seed", style = MaterialTheme.typography.bodyMedium) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextPrimaryColor
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = AppBackgroundColor,
-                    titleContentColor = TextPrimaryColor
-                )
-            )
-        },
+        topBar = { ImportFromSeedTopBar(onBackClick = { navController.navigateUp() }) },
         bottomBar = {
-            GoldGradientButton(
-                label = "Import",
+            ImportButton(
                 onClick = {
                     focusManger.clearFocus()
                     keyboardController?.hide()
                     viewModel.onEvent(ImportFromSeedEvent.ImportBtnClick)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, bottom = 24.dp, top = 8.dp)
+                }
             )
         }
     ) { paddingValues ->
@@ -121,45 +104,19 @@ fun ImportFromSeedScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues) // Apply padding from Scaffold
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = HorizontalScreenPadding)
                 .verticalScroll(rememberScrollState()), // Enable scrolling for smaller screens
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // Seed Phrase Input
-            Row(verticalAlignment = Alignment.CenterVertically) {
-
-                AppTextField(
-                    value = state.seedPhrase,
-                    onValueChange = { viewModel.onEvent(ImportFromSeedEvent.SeedPhraseEntered(it)) },
-                    label = "Seed Phrase",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                    minLines = 2,
-                    isTextArea = true,
-                    modifier = Modifier.weight(1f),
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(onClick = { context.pasteFromClipboard() }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_scanner),
-                        contentDescription = "Scan Seed Phrase",
-                        tint = TextHintColor,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-            if (state.seedPhraseError.isNotBlank()) {
-                Text(
-                    text = state.seedPhraseError,
-                    style = MaterialTheme.typography.bodySmall.copy(color = TextHintColor),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 4.dp, top = 4.dp)
-                )
-            }
-
+            SeedPhraseField(
+                seedPhrase = state.seedPhrase,
+                onSeedPhraseChange = { viewModel.onEvent(ImportFromSeedEvent.SeedPhraseEntered(it)) },
+                onPasteClick = { context.pasteFromClipboard() }
+            )
+            FieldErrorText(error = state.seedPhraseError)
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -173,23 +130,10 @@ fun ImportFromSeedScreen(
                 isPasswordToggleEnabled = true,
                 passwordVisible = state.newPasswordVisible,
                 onPasswordVisibilityChange = {
-                    viewModel.onEvent(
-                        ImportFromSeedEvent.NewPasswordToggle(
-                            it
-                        )
-                    )
+                    viewModel.onEvent(ImportFromSeedEvent.NewPasswordToggle(it))
                 }
             )
-            if (state.newPasswordError.isNotBlank()) {
-                Text(
-                    text = state.newPasswordError,
-                    style = MaterialTheme.typography.bodySmall.copy(color = TextHintColor),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 4.dp, top = 4.dp)
-                )
-            }
-
+            FieldErrorText(error = state.newPasswordError)
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -203,22 +147,10 @@ fun ImportFromSeedScreen(
                 isPasswordToggleEnabled = true,
                 passwordVisible = state.confirmPasswordVisible,
                 onPasswordVisibilityChange = {
-                    viewModel.onEvent(
-                        ImportFromSeedEvent.ConfirmPasswordToggle(
-                            it
-                        )
-                    )
+                    viewModel.onEvent(ImportFromSeedEvent.ConfirmPasswordToggle(it))
                 }
             )
-            if (state.confirmPasswordError.isNotBlank()) {
-                Text(
-                    text = state.confirmPasswordError,
-                    style = MaterialTheme.typography.bodySmall.copy(color = TextHintColor),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 4.dp, top = 4.dp)
-                )
-            }
+            FieldErrorText(error = state.confirmPasswordError)
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -227,8 +159,8 @@ fun ImportFromSeedScreen(
                 FaceIdToggleRow(
                     label = "Sign in with Face ID?",
                     checked = state.signInWithFaceId,
-                    onCheckedChange = {
-                        if (it) {
+                    onCheckedChange = { enabled ->
+                        if (enabled) {
                             BiometricHelper.authenticate(
                                 context as FragmentActivity,
                                 title = "Confirm Fingerprint",
@@ -272,8 +204,88 @@ fun ImportFromSeedScreen(
 
             if (state.responseState is ResponseState.Loading) {
                 CircularProgressIndicator(color = OnboardingGold1)
+            } else if (state.responseState is ResponseState.Error) {
+                FieldErrorText(error = (state.responseState as ResponseState.Error).message)
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ImportFromSeedTopBar(onBackClick: () -> Unit) {
+    CenterAlignedTopAppBar(
+        title = { Text("Import From Seed", style = MaterialTheme.typography.bodyMedium) },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = TextPrimaryColor
+                )
+            }
+        },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+            containerColor = AppBackgroundColor,
+            titleContentColor = TextPrimaryColor
+        )
+    )
+}
+
+@Composable
+private fun ImportButton(onClick: () -> Unit) {
+    GoldGradientButton(
+        label = "Import",
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, bottom = 24.dp, top = 8.dp)
+    )
+}
+
+@Composable
+private fun SeedPhraseField(
+    seedPhrase: String,
+    onSeedPhraseChange: (String) -> Unit,
+    onPasteClick: () -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        AppTextField(
+            value = seedPhrase,
+            onValueChange = onSeedPhraseChange,
+            label = "Seed Phrase",
+            keyboardOptions = KeyboardOptions(
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Done
+            ),
+            minLines = 2,
+            isTextArea = true,
+            modifier = Modifier.weight(1f),
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(onClick = onPasteClick) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_scanner),
+                contentDescription = "Scan Seed Phrase",
+                tint = TextHintColor,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FieldErrorText(error: String) {
+    if (error.isNotBlank()) {
+        Text(
+            text = error,
+            style = MaterialTheme.typography.bodySmall.copy(color = TextHintColor),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, top = 4.dp)
+        )
     }
 }
 
@@ -306,14 +318,7 @@ fun TermsAndConditionsText() {
                     .firstOrNull()
                     ?.let {
                         // TODO: Handle click, e.g., open terms URL
-                        println("Clicked on: ${it.item}")
                     }
             }
     )
 }
-
-
-
-
-
-

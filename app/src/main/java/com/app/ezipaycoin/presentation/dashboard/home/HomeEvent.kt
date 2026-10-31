@@ -6,4 +6,5 @@ sealed class HomeEvent {
     data class ExpandCryptoOptions(val isExpand: Boolean) : HomeEvent()
     data class CryptoOptionChanged(val crypto: DashboardResponse.Crypto) : HomeEvent()
     data class ComingSoonDialog(val isVisible: Boolean) : HomeEvent()
+    data object DismissAnnouncement : HomeEvent()
 }

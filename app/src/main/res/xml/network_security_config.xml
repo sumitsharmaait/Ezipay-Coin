@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Release: HTTPS only. Debug and sandbox builds use src/debug's copy, which allows local cleartext hosts. -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">18.142.108.53</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="false" />
 </network-security-config>

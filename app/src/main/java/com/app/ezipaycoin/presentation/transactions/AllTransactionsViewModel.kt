@@ -1,10 +1,12 @@
 package com.app.ezipaycoin.presentation.transactions
 
 import androidx.lifecycle.ViewModel
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.request.TransactionsRequest
 import com.app.ezipaycoin.domain.repository.TransactionsRepository
 import com.app.ezipaycoin.utils.ResponseState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +28,7 @@ class AllTransactionsViewModel(private val repository: TransactionsRepository) :
                 _uiState.update {
                     it.copy(
                         selectedFilter = event.filter,
-                        currentPage = 0,
+                        currentPage = FIRST_PAGE,
                         isLoading = false,
                         transactionsList = emptyList(),
                         canLoadMore = true,
@@ -38,63 +40,72 @@ class AllTransactionsViewModel(private val repository: TransactionsRepository) :
         }
     }
 
+    /** Retries the page that failed. */
+    fun retry() {
+        _uiState.update { it.copy(responseState = ResponseState.Idle) }
+        loadMoreTransactions()
+    }
+
     fun loadMoreTransactions() {
         if (_uiState.value.isLoading || !_uiState.value.canLoadMore) return
 
+        // Captured so a filter change while a request is in flight drops the stale answer.
+        val filter = _uiState.value.selectedFilter
+        val page = _uiState.value.currentPage
+
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(isLoading = true)
-            }
+            _uiState.update { it.copy(isLoading = true) }
             try {
-                val transactionsRequest = TransactionsRequest(
-                    chain = "BSC",
-                    size = 10,
-                    page = _uiState.value.currentPage,
-                    type = _uiState.value.selectedFilter.lowercase()
+                val res = repository.getTransactions(
+                    TransactionsRequest(
+                        chain = "BSC",
+                        size = PAGE_SIZE,
+                        page = page,
+                        type = filter.lowercase()
+                    )
                 )
-                val res = repository.getTransactions(transactionsRequest)
+                if (_uiState.value.selectedFilter != filter) return@launch
                 if (res.apiStatus) {
-                    if (res.apiData.items.isNotEmpty()) {
-                        val totalTransactions = _uiState.value.transactionsList + res.apiData.items
-                        val canLoadMore = totalTransactions.size != res.apiData.total
-                        _uiState.update {
-                            it.copy(
-                                responseState = ResponseState.Success(res),
-                                transactionsList = totalTransactions,
-                                isLoading = false,
-                                currentPage = it.currentPage++,
-                                canLoadMore = canLoadMore
-                            )
-                        }
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                responseState = ResponseState.Error(
-                                    "No Transactions Found!!"
-                                )
-                            )
-                        }
-                    }
-                } else {
+                    val items = res.apiData.items
+                    val all = _uiState.value.transactionsList + items
+                    // The last page is short, or the server total has been reached.
+                    val canLoadMore = items.size >= PAGE_SIZE && all.size < res.apiData.total
                     _uiState.update {
                         it.copy(
-                            responseState = ResponseState.Error(
-                                res.apiMessage
-                            )
+                            responseState = if (all.isEmpty()) {
+                                ResponseState.Error(EMPTY_MESSAGE)
+                            } else {
+                                ResponseState.Success(res)
+                            },
+                            transactionsList = all,
+                            isLoading = false,
+                            currentPage = if (items.isNotEmpty()) page + 1 else page,
+                            canLoadMore = items.isNotEmpty() && canLoadMore
                         )
                     }
+                } else {
+                    fail(filter, res.apiMessage)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
-                        )
-                    )
-                }
+                fail(filter, UserMessages.of(e, "Unknown error"))
             }
         }
     }
 
+    // The page number is not advanced, so retry() asks for the same page again.
+    private fun fail(filter: String, message: String) {
+        if (_uiState.value.selectedFilter != filter) return
+        _uiState.update {
+            it.copy(isLoading = false, responseState = ResponseState.Error(message))
+        }
+    }
+
+    companion object {
+        // The backend counts pages from 1 (0 is treated as 1 as well).
+        const val FIRST_PAGE = 1
+        const val PAGE_SIZE = 10
+        const val EMPTY_MESSAGE = "No Transactions Found!!"
+    }
 }

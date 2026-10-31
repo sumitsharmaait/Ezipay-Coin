@@ -26,11 +26,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import com.app.ezipaycoin.utils.RelockPolicy
+import com.app.ezipaycoin.utils.SessionManager
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -56,11 +60,13 @@ import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
 import com.app.ezipaycoin.utils.ViewModelFactory
 import kotlinx.coroutines.launch
-
 class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     private lateinit var navController: NavHostController
+    private val relockPolicy = RelockPolicy()
+    private var walletShared: WalletSharedViewModel? = null
+    private var unlockVm: UnlockScreenVM? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,6 +91,18 @@ class MainActivity : FragmentActivity() {
         )[UnlockScreenVM::class.java]
 
 
+        walletShared = walletSharedViewModel
+        lifecycleScope.launch {
+            SessionManager.sessionExpired.collect {
+                // Signing in again failed after a rejected session: ask for the password and sign in on unlock.
+                if (viewModel.uiState.value.passwordCreated) {
+                    unlockScreenVM.reset()
+                    walletSharedViewModel.onEvent(SharedEvent.AppLocked)
+                }
+            }
+        }
+        unlockVm = unlockScreenVM
+
         val bottomNavItems = App.getInstance().items
         val navigationDrawerItems = bottomNavItems + App.getInstance().navigationItems
 
@@ -92,7 +110,11 @@ class MainActivity : FragmentActivity() {
             RequestNotificationPermissionOnce()
             val sharedState by walletSharedViewModel.uiState.collectAsState()
             val state by viewModel.uiState.collectAsState()
-            if (!sharedState.isUnlocked && state.passwordCreated) {
+            if (state.storageError) {
+                EzipayCoinTheme {
+                    StorageRecoveryScreen(onRestoreFromSeed = viewModel::startRecovery)
+                }
+            } else if (!sharedState.isUnlocked && state.passwordCreated) {
                 UnlockScreen(
                     onUnlocked = { walletSharedViewModel.onEvent(SharedEvent.AppUnlocked) },
                     viewModel = unlockScreenVM
@@ -248,6 +270,7 @@ class MainActivity : FragmentActivity() {
                                     // Root NavHost
                                     Navigation(
                                         state.isLoggedIn,
+                                        passwordCreated = state.passwordCreated,
                                         navHostController = navController,
                                         apiService,
                                         walletSharedViewModel
@@ -262,6 +285,17 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
+    override fun onStop() {
+        super.onStop()
+        if (!isChangingConfigurations) relockPolicy.onBackground()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (relockPolicy.onForeground() && viewModel.uiState.value.passwordCreated) {
+            unlockVm?.reset()
+            walletShared?.onEvent(SharedEvent.AppLocked)
+        }
+    }
 }
-
-

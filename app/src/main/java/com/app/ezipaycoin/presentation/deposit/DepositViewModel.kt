@@ -1,5 +1,7 @@
 package com.app.ezipaycoin.presentation.deposit
 
+import com.app.ezipaycoin.data.remote.api.PaymentsProxy
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
@@ -72,10 +74,10 @@ class DepositViewModel(
                     val req = WalletInfoDepositeTokenRequest(
                         InvoiceNumber = invoiceNumber,
                         NetworkValue = res.result[0].NetworkValue,
-                        TokenValue = tokenId.symbol,
+                        TokenValue = tokenId.symbol.orEmpty(),
                         RecipientWalletAddressCrypto = _uiState.value.walletAddress
                     )
-                    val walletInfoRes = repository.getWalletInfoDepositeToken(req)
+                    val walletInfoRes = repository.getWalletInfoDepositeToken(req, PaymentsProxy.newIdempotencyKey())
                     if (walletInfoRes.isSuccess) {
                         walletInfoRes.result.WalletAddress?.let { address ->
                             _uiState.update {
@@ -121,7 +123,7 @@ class DepositViewModel(
                 _uiState.update {
                     it.copy(
                         walletInfoResponse = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }
@@ -161,7 +163,7 @@ class DepositViewModel(
                     _uiState.update {
                         it.copy(
                             statusDepositeResponse = ResponseState.Error(
-                                e.localizedMessage ?: "Unknown error"
+                                UserMessages.of(e, "Unknown error")
                             )
                         )
                     }
