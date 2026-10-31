@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.presentation.dashboard.wallet
 
+import com.app.ezipaycoin.BuildConfig
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -353,16 +354,6 @@ fun WalletScreen(
                                 state.selectedTokenId?.let {
 
                                     when (title) {
-                                        "Buy Crypto with Card" -> {
-                                            navController.navigate(
-                                                Screen.AppNavScreens.DepositViaCard(
-                                                    token = Json.encodeToString(
-                                                        it
-                                                    )
-                                                )
-                                            )
-                                        }
-
                                         "Deposit (On-chain)" -> {
                                             navController.navigate(
                                                 Screen.AppNavScreens.Deposit(
@@ -377,7 +368,7 @@ fun WalletScreen(
                                             navController.navigate(Screen.AppNavScreens.Pay)
                                         }
 
-                                        else -> {
+                                        "Withdraw (On-chain)" -> if (BuildConfig.FEATURE_ONCHAIN_WITHDRAW) {
                                             navController.navigate(
                                                 Screen.AppNavScreens.Withdraw(
                                                     token = Json.encodeToString(
@@ -385,7 +376,11 @@ fun WalletScreen(
                                                     )
                                                 )
                                             )
+                                        } else {
+                                            Unit
                                         }
+
+                                        else -> Unit
                                     }
                                 }
                             }
@@ -412,15 +407,6 @@ private fun SecureWalletSheetContent(onGotItClick: (title: String) -> Unit) {
             .verticalScroll(rememberScrollState()), // In case content is long
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-//        Spacer(modifier = Modifier.height(8.dp)) // Space after drag handle
-//        RowBottomSheet(
-//            iconRes = R.drawable.ic_usdt_icon,
-//            title = "Buy Crypto with Card",
-//            subTitle = "Instantly purchase crypto using your Visa or MasterCard. Funds arrive in your wallet via on-chain transfer.",
-//            onItemClick = {
-//                onGotItClick(it)
-//            }
-//        )
         Spacer(modifier = Modifier.height(8.dp))
         RowBottomSheet(
             iconRes = R.drawable.ic_usdt_icon,
@@ -430,15 +416,18 @@ private fun SecureWalletSheetContent(onGotItClick: (title: String) -> Unit) {
                 onGotItClick(it)
             }
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        RowBottomSheet(
-            iconRes = R.drawable.ic_usdt_icon,
-            title = "Withdraw (On-chain)",
-            subTitle = "Send tokens from your wallet to any valid on-chain address securely and quickly.",
-            onItemClick = {
-                onGotItClick(it)
-            }
-        )
+        // Hidden: the payout is funded by the merchant account, not by the user's balance.
+        if (BuildConfig.FEATURE_ONCHAIN_WITHDRAW) {
+            Spacer(modifier = Modifier.height(8.dp))
+            RowBottomSheet(
+                iconRes = R.drawable.ic_usdt_icon,
+                title = "Withdraw (On-chain)",
+                subTitle = "Send tokens from your wallet to any valid on-chain address securely and quickly.",
+                onItemClick = {
+                    onGotItClick(it)
+                }
+            )
+        }
 //        Spacer(modifier = Modifier.height(8.dp))
 //        RowBottomSheet(
 //            iconRes = R.drawable.ic_usdt_icon,

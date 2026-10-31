@@ -68,11 +68,6 @@ sealed class Screen(val route: String) {
         )
 
         @Serializable
-        data class DepositViaCard(
-            val token: String
-        )
-
-        @Serializable
         data class WebViewScreen(
             val url: String
         )

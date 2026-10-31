@@ -1,7 +1,6 @@
 package com.app.ezipaycoin.data.remote.api
 
 import com.app.ezipaycoin.data.remote.dto.request.BitPayRequest
-import com.app.ezipaycoin.data.remote.dto.request.DepositeViaCardRequest
 import com.app.ezipaycoin.data.remote.dto.request.EstimateGasRequest
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.data.remote.dto.request.NetworkInfoByTokenRequest
@@ -13,7 +12,6 @@ import com.app.ezipaycoin.data.remote.dto.request.WithdrawalTransferPayoutReques
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
 import com.app.ezipaycoin.data.remote.dto.response.BnbChainResponse
 import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
-import com.app.ezipaycoin.data.remote.dto.response.DepositeByCardResponse
 import com.app.ezipaycoin.data.remote.dto.response.LoginResponse
 import com.app.ezipaycoin.data.remote.dto.response.NetworkInfoByTokenResponse
 import com.app.ezipaycoin.data.remote.dto.response.NonceResponse
@@ -36,7 +34,9 @@ import com.app.ezipaycoin.data.remote.dto.response.TokenMetadataResponse
 import com.app.ezipaycoin.data.remote.dto.response.VideoJobStatusResponse
 import com.app.ezipaycoin.data.remote.dto.response.VideoUploadResponse
 import okhttp3.RequestBody
-import okhttp3.Response
+import okhttp3.ResponseBody
+import retrofit2.Response
+import retrofit2.http.Header
 import retrofit2.http.Path
 
 import com.app.ezipaycoin.data.remote.dto.request.MintAllowlistRequest
@@ -82,20 +82,25 @@ interface ApiService {
     @POST("/")
     suspend fun getEstimateGas(@Body request: EstimateGasRequest): BnbChainResponse
 
-    @POST("NetworkInfobyTokenId")
-    suspend fun getNetworkInfoByTokenID(@Body request: NetworkInfoByTokenRequest): NetworkInfoByTokenResponse
+    // Payments proxy on our backend (the vendor credential lives there). Replies are the vendor's
+    // JSON or an apiMessage envelope; PaymentsProxy.map decodes both.
+    @POST("Payments/NetworkInfobyTokenId")
+    suspend fun getNetworkInfoByTokenID(@Body request: NetworkInfoByTokenRequest): Response<ResponseBody>
 
-    @POST("CryptoPayinDeposittoken")
-    suspend fun getWalletInfoDepositeToken(@Body request: WalletInfoDepositeTokenRequest): WalletInfoDepositeByTokenResponse
+    @POST("Payments/CryptoPayinDeposittoken")
+    suspend fun getWalletInfoDepositeToken(
+        @Header("Idempotency-Key") idempotencyKey: String,
+        @Body request: WalletInfoDepositeTokenRequest
+    ): Response<ResponseBody>
 
-    @POST("CryptoPayoutTransfertoken")
-    suspend fun postWithdrawalTransferPayout(@Body request: WithdrawalTransferPayoutRequest): WalletInfoDepositeByTokenResponse
+    @POST("Payments/CryptoPayoutTransfertoken")
+    suspend fun postWithdrawalTransferPayout(
+        @Header("Idempotency-Key") idempotencyKey: String,
+        @Body request: WithdrawalTransferPayoutRequest
+    ): Response<ResponseBody>
 
-    @POST("CryptoPayinTransactionStatusCheck")
-    suspend fun checkDepositeTransactionStatus(@Body request: StatusDepositeRequest): WalletInfoDepositeByTokenResponse
-
-    @POST("CardTxn")
-    suspend fun postDepositeViaCard(@Body request: DepositeViaCardRequest): DepositeByCardResponse
+    @POST("Payments/CryptoPayinTransactionStatusCheck")
+    suspend fun checkDepositeTransactionStatus(@Body request: StatusDepositeRequest): Response<ResponseBody>
 
     // ---------------------- KYC ----------------------
 

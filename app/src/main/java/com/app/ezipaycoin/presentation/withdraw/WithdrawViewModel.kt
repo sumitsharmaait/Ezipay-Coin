@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.presentation.withdraw
 
+import com.app.ezipaycoin.data.remote.api.PaymentsProxy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.request.NetworkInfoByTokenRequest
@@ -136,7 +137,7 @@ class WithdrawViewModel(
                     Amount = _uiState.value.amount,
                     Contractaddress = tokenId.contractAddress.toString()
                 )
-                val transferPaymentRes = repository.withdrawalPayoutTransfer(req)
+                val transferPaymentRes = repository.withdrawalPayoutTransfer(req, PaymentsProxy.newIdempotencyKey())
                 if (transferPaymentRes.isSuccess) {
                     transferPaymentRes.result.TransactionId?.let { transaction ->
                         _uiState.update {

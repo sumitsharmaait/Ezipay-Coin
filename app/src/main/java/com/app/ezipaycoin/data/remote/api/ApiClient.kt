@@ -2,7 +2,6 @@ package com.app.ezipaycoin.data.remote.api
 
 import com.app.ezipaycoin.BuildConfig
 import com.app.ezipaycoin.utils.SessionManager
-import okhttp3.Credentials
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -13,10 +12,10 @@ import java.util.concurrent.TimeUnit
 
 object ApiClient {
     private const val BASE_URL = BuildConfig.API_BASE_URL
+    // Headers in debug, nothing in release. The bearer token is never written to the log.
     private val logging = HttpLoggingInterceptor().apply {
-//        level = HttpLoggingInterceptor.Level.BODY // Or HEADERS, BASIC, NONE
-//        level = HttpLoggingInterceptor.Level.BASIC
-        level = HttpLoggingInterceptor.Level.HEADERS
+        level = HttpLogging.levelFor(BuildConfig.DEBUG)
+        HttpLogging.REDACTED_HEADERS.forEach { redactHeader(it) }
     }
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -51,23 +50,6 @@ object ApiClient {
             .build()
     }
 
-    private val clientBasicAuth = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .addInterceptor(BasicAuthInterceptor())
-        .addInterceptor(logging)
-        .build()
-
-    val depositWithdrawalPay: Retrofit by lazy {
-        Retrofit.Builder()
-            .baseUrl(BuildConfig.IRIPASH_BASE_URL)
-            .client(clientBasicAuth)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-    }
-
-
     class AuthInterceptor : Interceptor {
         override fun intercept(chain: Interceptor.Chain): Response {
             val original = chain.request()
@@ -80,19 +62,6 @@ object ApiClient {
             val request = requestBuilder.build()
             return chain.proceed(request)
         }
-    }
-
-    class BasicAuthInterceptor : Interceptor {
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val credentials =
-                Credentials.basic("8138", "r0f4z10kkF+xFhaxG6TwjbR5k8s4O6SK0o+jSakusM0=")
-            val newRequest = chain.request().newBuilder()
-                .addHeader("Authorization", credentials)
-                .build()
-
-            return chain.proceed(newRequest)
-        }
-
     }
 
 }
