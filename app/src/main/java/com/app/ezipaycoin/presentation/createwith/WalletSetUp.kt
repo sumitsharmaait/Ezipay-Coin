@@ -61,12 +61,16 @@ import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SocialProfile
 import com.facebook.AccessToken
 import com.facebook.CallbackManager
+import com.facebook.FacebookSdk
 import com.facebook.FacebookCallback
 import com.facebook.FacebookException
 import com.facebook.login.LoginManager
 import com.facebook.login.LoginResult
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.app.ezipaycoin.config.FeatureFlags
+import com.app.ezipaycoin.config.SocialSignInPolicy
+import com.app.ezipaycoin.utils.FacebookSignIn
 import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
@@ -98,7 +102,12 @@ fun WalletSetUp(
     val callbackManager = remember { CallbackManager.Factory.create() }
 
 
-    DisposableEffect(callbackManager) {
+    val enabledFeatures by FeatureFlags.enabled.collectAsState()
+    val showSocial = SocialSignInPolicy.showButtons(enabledFeatures)
+
+    // The Facebook SDK starts on the first tap (see FacebookSignIn), so nothing is registered here.
+    fun startFacebookSignIn() {
+        FacebookSignIn.ensureInitialized(context)
         val loginManager = LoginManager.getInstance()
         loginManager.registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
             override fun onSuccess(result: LoginResult) {
@@ -116,8 +125,15 @@ fun WalletSetUp(
                 Log.e("FacebookSignIn", "Login error", error)
             }
         })
+        loginManager.logInWithReadPermissions(
+            context as Activity,
+            listOf("email", "public_profile")
+        )
+    }
+
+    DisposableEffect(callbackManager) {
         onDispose {
-            loginManager.unregisterCallback(callbackManager)
+            if (FacebookSdk.isInitialized()) LoginManager.getInstance().unregisterCallback(callbackManager)
         }
     }
 
@@ -253,32 +269,29 @@ fun WalletSetUp(
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            // "Or Login with" Divider
-            OrLoginWithDivider()
+            if (showSocial) {
+                // "Or Login with" Divider
+                OrLoginWithDivider()
 
-            Spacer(modifier = Modifier.height(30.dp))
-            // Social Login Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly // Or Arrangement.spacedBy(16.dp)
-            ) {
-                SocialLoginButton(
-                    iconRes = R.drawable.sign_in_facebook,
-                    contentDescription = "Login with Facebook",
-                    onClick = {
-                        LoginManager.getInstance().logInWithReadPermissions(
-                            context as Activity,
-                            listOf("email", "public_profile")
-                        )
-                    }
-                )
-                SocialLoginButton(
-                    iconRes = R.drawable.sign_in_google,
-                    contentDescription = "Login with Google",
-                    onClick = {
-                        launchGoogleSignIn()
-                    }
-                )
+                Spacer(modifier = Modifier.height(30.dp))
+                // Social Login Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly // Or Arrangement.spacedBy(16.dp)
+                ) {
+                    SocialLoginButton(
+                        iconRes = R.drawable.sign_in_facebook,
+                        contentDescription = "Login with Facebook",
+                        onClick = { startFacebookSignIn() }
+                    )
+                    SocialLoginButton(
+                        iconRes = R.drawable.sign_in_google,
+                        contentDescription = "Login with Google",
+                        onClick = {
+                            launchGoogleSignIn()
+                        }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f)) // Push bottom content down

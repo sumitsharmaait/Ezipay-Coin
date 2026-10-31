@@ -13,6 +13,7 @@ enum class Feature(
     val serverKey: String?,
     val releaseDefault: Boolean,
     val clientSupported: Boolean = true,
+    val cacheLastKnown: Boolean = false,
 ) {
     /** Read-only staking pools. Stake/claim/unstake need the prepare -> sign flow, not in this client yet. */
     STAKING_POOLS("staking", releaseDefault = false),
@@ -24,6 +25,13 @@ enum class Feature(
     KYC("kyc", releaseDefault = false, clientSupported = false),
     /** Backend mint is server-signed; the user must sign it. */
     NFT_MINT("nftMint", releaseDefault = false, clientSupported = false),
+
+    /**
+     * Google and Facebook sign-up on the set-up screen. App/config needs a signed-in user, so the
+     * onboarding screen (before login) cannot ask the server: it uses the value stored from the
+     * last successful fetch ([cacheLastKnown]), or the build default (off) when there is none.
+     */
+    SOCIAL_SIGN_IN("socialSignIn", releaseDefault = false, cacheLastKnown = true),
 
     // No backend source. Visible only in developer builds.
     SPIN_AND_WIN(null, releaseDefault = false, clientSupported = false),
