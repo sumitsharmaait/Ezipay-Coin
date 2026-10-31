@@ -24,8 +24,6 @@ import com.app.ezipaycoin.data.remote.dto.response.TransactionsResponse
 import com.app.ezipaycoin.data.remote.dto.response.WalletInfoDepositeByTokenResponse
 import okhttp3.MultipartBody
 import retrofit2.http.Body
-import retrofit2.http.HTTP
-import retrofit2.http.Header
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -59,9 +57,9 @@ interface ApiService {
     suspend fun postLogin(@Body request: LoginRequest): BaseResponse<LoginResponse>
 
     /** Deletes the account server-side. The body must be {"confirm":"DELETE"}. */
-    @HTTP(method = "DELETE", path = "Users/me", hasBody = true)
+    @retrofit2.http.HTTP(method = "DELETE", path = "Users/me", hasBody = true)
     suspend fun deleteAccount(
-        @Header("Idempotency-Key") idempotencyKey: String,
+        @retrofit2.http.Header("Idempotency-Key") idempotencyKey: String,
         @Body request: DeleteAccountRequest
     ): BaseResponse<String?>
 
