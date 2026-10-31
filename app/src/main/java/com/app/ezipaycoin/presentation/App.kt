@@ -35,6 +35,7 @@ class App : Application() {
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         System.loadLibrary("TrustWalletCore")
         UserPreferencesRepository.init(this)
+        com.app.ezipaycoin.config.FeatureFlags.init(this)
     }
 
     val items = listOf(

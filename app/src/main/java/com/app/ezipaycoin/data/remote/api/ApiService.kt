@@ -181,4 +181,10 @@ interface ApiService {
         @Body request: MintAllowlistRequest
     ): BaseResponse<NftMintResponse>
 
+
+    // ---------- App config, Earn, Staking reads, Learn (content branches) ----------
+
+    @GET("App/config")
+    suspend fun getAppConfig(): BaseResponse<com.app.ezipaycoin.data.remote.dto.response.AppConfigResponse>
+
 }
