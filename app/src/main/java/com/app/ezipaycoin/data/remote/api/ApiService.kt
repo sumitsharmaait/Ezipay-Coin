@@ -17,6 +17,7 @@ import com.app.ezipaycoin.data.remote.dto.response.DepositeByCardResponse
 import com.app.ezipaycoin.data.remote.dto.response.LoginResponse
 import com.app.ezipaycoin.data.remote.dto.response.NetworkInfoByTokenResponse
 import com.app.ezipaycoin.data.remote.dto.response.NonceResponse
+import com.app.ezipaycoin.data.remote.dto.response.MeProfileResponse
 import com.app.ezipaycoin.data.remote.dto.response.TransactionReceiptResponse
 import com.app.ezipaycoin.data.remote.dto.response.TransactionsResponse
 import com.app.ezipaycoin.data.remote.dto.response.WalletInfoDepositeByTokenResponse
@@ -63,6 +64,9 @@ interface ApiService {
     @Multipart
     @POST("Users/ProfilePicUpload")
     suspend fun updateProfile(@Part file: MultipartBody.Part): BaseResponse<String>
+
+    @GET("Users/me")
+    suspend fun getMe(): BaseResponse<MeProfileResponse>
 
     @GET("dashboard")
     suspend fun getDashboard(): BaseResponse<DashboardResponse>
