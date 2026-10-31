@@ -86,7 +86,6 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
                 FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         token = task.result
-                        Log.d("FCM", "Current token: $token")
                     }
                 }
                 val res = repository.getNonce(publicKey)

@@ -35,12 +35,29 @@ android {
         buildConfigField("String", "USDT_TOKEN_CONTRACT", "\"0x55d398326f99059fF775485246999027B3197955\"")
     }
 
+    // Release signing comes from gradle properties (~/.gradle/gradle.properties) or the environment:
+    // EZIPAY_RELEASE_STORE_FILE, EZIPAY_RELEASE_STORE_PASSWORD, EZIPAY_RELEASE_KEY_ALIAS,
+    // EZIPAY_RELEASE_KEY_PASSWORD. When any is missing the release build is left unsigned.
+    fun signingValue(name: String): String? =
+        (project.findProperty(name) as String?)?.takeIf { it.isNotBlank() }
+            ?: System.getenv(name)?.takeIf { it.isNotBlank() }
+
+    val releaseStoreFile = signingValue("EZIPAY_RELEASE_STORE_FILE")
+    val releaseStorePassword = signingValue("EZIPAY_RELEASE_STORE_PASSWORD")
+    val releaseKeyAlias = signingValue("EZIPAY_RELEASE_KEY_ALIAS")
+    val releaseKeyPassword = signingValue("EZIPAY_RELEASE_KEY_PASSWORD")
+    val hasReleaseSigning = listOf(
+        releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
+    ).all { it != null }
+
     signingConfigs {
-        create("release") {
-            storeFile = file("../coin_keystore") // path to your keystore
-            storePassword = "EzipayCoin"
-            keyAlias = "key0"
-            keyPassword = "EzipayCoin"
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
@@ -51,7 +68,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
 
         debug {

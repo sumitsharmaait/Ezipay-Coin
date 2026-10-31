@@ -101,12 +101,10 @@ fun WalletSetUp(
         val loginManager = LoginManager.getInstance()
         loginManager.registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
             override fun onSuccess(result: LoginResult) {
-                Log.d("FacebookSignIn", "Facebook token: ${result.accessToken.token}")
                 handleFacebookAccessToken(
                     result.accessToken,
                     auth,
                     onSuccess = { name, email, pic ->
-                        Log.d("FacebookSignIn", "Success: $name, $email")
                         viewModel.onEvent(WalletSetupEvent.SocialDetailsFetched(name, email, pic))
                     })
             }
@@ -136,15 +134,16 @@ fun WalletSetUp(
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         auth.currentUser?.let {
-                            if (!it.displayName.isNullOrEmpty() && !it.email.isNullOrEmpty()) {
+                            val displayName = it.displayName
+                            val email = it.email
+                            if (!displayName.isNullOrEmpty() && !email.isNullOrEmpty()) {
                                 viewModel.onEvent(
                                     WalletSetupEvent.SocialDetailsFetched(
-                                        it.displayName!!,
-                                        it.email!!,
+                                        displayName,
+                                        email,
                                         it.photoUrl.toString()
                                     )
                                 )
-                                Log.d("GoogleSignIn", "Success: ${auth.currentUser?.displayName}")
                             }
                         }
                     } else {
@@ -386,9 +385,10 @@ private fun handleFacebookAccessToken(
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 auth.currentUser?.let {
-                    if (!it.displayName.isNullOrEmpty() && !it.email.isNullOrEmpty()) {
-                        onSuccess(it.displayName!!, it.email!!, it.photoUrl.toString())
-                        Log.d("FacebookSignIn", "Success: ${auth.currentUser?.displayName}")
+                    val displayName = it.displayName
+                    val email = it.email
+                    if (!displayName.isNullOrEmpty() && !email.isNullOrEmpty()) {
+                        onSuccess(displayName, email, it.photoUrl.toString())
                     }
                 }
             } else {
