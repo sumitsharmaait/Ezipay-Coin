@@ -11,7 +11,6 @@ import com.app.ezipaycoin.data.repository.TransactionRepoImpl
 import com.app.ezipaycoin.data.repository.UserProfileRepoImpl
 import com.app.ezipaycoin.utils.SessionManager
 import com.google.gson.JsonParser
-import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -113,12 +112,11 @@ class RepositoryApiTest {
     }
 
     @Test
-    fun anEmptyTokenStillSendsABearerHeader() = runBlocking {
-        // SessionManager.token starts as "" so pre-login calls carry an empty Bearer header (OkHttp trims the space). Pinned as current behaviour.
+    fun anEmptyTokenSendsNoAuthorizationHeader() = runBlocking {
         SessionManager.token = ""
         h.enqueueGolden("auth-nonce.json")
         AuthRepoImpl(h.api).getNonce("0x1")
-        assertEquals("Bearer", h.server.takeRequest().getHeader("Authorization"))
+        assertNull(h.server.takeRequest().getHeader("Authorization"))
     }
 
     // ---- dashboard ----
@@ -223,16 +221,15 @@ class RepositoryApiTest {
     }
 
     @Test
-    fun upstreamFailureWithTextDataBreaksGsonParsing() {
+    fun upstreamFailureWithTextDataIsReturnedAsARefusedEnvelope() = runBlocking {
         // The backend answers apiStatus=false with a plain string in apiData (see the recorded golden).
-        // The typed model cannot hold it, so the call throws instead of returning the envelope.
+        // The envelope adapter drops the unusable data so the caller still sees the message.
         h.enqueueGolden("wallet-transactions-upstream-error.json")
-        try {
-            runBlocking { TransactionRepoImpl(h.api, h.rpc).getTransactions(TransactionsRequest()) }
-            fail("expected a parse failure")
-        } catch (e: JsonSyntaxException) {
-            assertNotNull(e.message)
-        }
+        val res = TransactionRepoImpl(h.api, h.rpc).getTransactions(TransactionsRequest())
+        assertFalse(res.apiStatus)
+        assertEquals("Transactions", res.apiMessage)
+        val data: Any? = res.apiData
+        assertNull(data)
     }
 
     // ---- chain RPC (JSON-RPC at the server root) ----

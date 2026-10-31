@@ -2,20 +2,21 @@ package com.app.ezipaycoin.data
 
 import com.app.ezipaycoin.data.remote.api.ApiClient
 import com.app.ezipaycoin.data.remote.api.ApiService
+import com.app.ezipaycoin.data.remote.api.EnvelopeAdapterFactory
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-/** A real ApiService (same Gson converter and auth interceptor as production) talking to a MockWebServer. */
+/** A real ApiService (same Gson converter, envelope adapter and auth interceptor as production) talking to a MockWebServer. */
 class ApiHarness(basePath: String = "/api/v1/") {
     val server = MockWebServer().also { it.start() }
 
     val api: ApiService = Retrofit.Builder()
         .baseUrl(server.url(basePath))
         .client(OkHttpClient.Builder().addInterceptor(ApiClient.AuthInterceptor()).build())
-        .addConverterFactory(GsonConverterFactory.create())
+        .addConverterFactory(GsonConverterFactory.create(EnvelopeAdapterFactory.gson))
         .build()
         .create(ApiService::class.java)
 
@@ -23,7 +24,7 @@ class ApiHarness(basePath: String = "/api/v1/") {
     val rpc: ApiService = Retrofit.Builder()
         .baseUrl(server.url("/"))
         .client(OkHttpClient())
-        .addConverterFactory(GsonConverterFactory.create())
+        .addConverterFactory(GsonConverterFactory.create(EnvelopeAdapterFactory.gson))
         .build()
         .create(ApiService::class.java)
 
