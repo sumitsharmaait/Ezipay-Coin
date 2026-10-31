@@ -1,12 +1,13 @@
 # Building and publishing the Android app
 
-This guide takes you from a fresh checkout to an app on Google Play. It covers the three build
+This guide takes you from a fresh checkout to an app on Google Play. It covers the four build
 types, how each one reaches its server, signing, version numbers and the Play Console steps.
 
 | Build type | Server | Use it for |
 |---|---|---|
 | `debug` | The Development Server running on your Mac | Day-to-day development |
 | `staging` | The Staging Server | Team testing before a release |
+| `uat` | The UAT server once one exists; the Staging Server until then | User-acceptance testing before production |
 | `release` | The Production Server | Google Play |
 
 ## 1. Prerequisites
@@ -41,24 +42,24 @@ On a machine with little memory, add `--max-workers=2`.
 
 ## 2. Build types at a glance
 
-| | `debug` | `staging` | `release` |
-|---|---|---|---|
-| Application id | `com.app.ezipaycoin.debug` once a Firebase config lists it, otherwise `com.app.ezipaycoin` | `com.app.ezipaycoin.staging` | `com.app.ezipaycoin` |
-| App name on the launcher | Ezipay Coin | **Ezipay Coin Staging** (orange icon background) | Ezipay Coin |
-| Server (`API_BASE_URL`) | `http://10.0.2.2:5009/api/v1/` (override `-PapiBaseUrl=...`) | `http://18.142.108.53/api/v1/` (override `-PstagingApiBaseUrl=...`) | `https://api.ezipaycoin.com/api/v1/` (override `-PproductionApiBaseUrl=https://...`) |
-| Chain | BSC Testnet (97) | **BSC Testnet (97) by default**; `-PstagingChain=mainnet` for BSC Mainnet (56) | BSC Mainnet (56) only |
-| In-app network switch | Yes (Profile > Network) | Yes (Profile > Network) | No |
-| Cleartext HTTP | `10.0.2.2`, `127.0.0.1`, `18.142.108.53` | `18.142.108.53` only | None (HTTPS only) |
-| Minified, not debuggable | No | Yes | Yes |
-| Signing | Debug key | Release key when configured, otherwise the debug key | Release key (unsigned without it) |
-| Developer options in Profile | Yes | No | No |
+| | `debug` | `staging` | `uat` | `release` |
+|---|---|---|---|---|
+| Application id | `com.app.ezipaycoin.debug` once a Firebase config lists it, otherwise `com.app.ezipaycoin` | `com.app.ezipaycoin.staging` | `com.app.ezipaycoin.uat` | `com.app.ezipaycoin` |
+| App name on the launcher | Ezipay Coin | **Ezipay Coin Staging** (orange icon background) | **Ezipay Coin UAT** (purple icon background) | Ezipay Coin |
+| Server (`API_BASE_URL`) | `http://10.0.2.2:5009/api/v1/` (override `-PapiBaseUrl=...`) | `http://18.142.108.53/api/v1/` (override `-PstagingApiBaseUrl=...`) | `-PuatApiBaseUrl=...`; **until it is set, the staging server** `http://18.142.108.53/api/v1/` | `https://api.ezipaycoin.com/api/v1/` (override `-PproductionApiBaseUrl=https://...`) |
+| Chain | BSC Testnet (97) | **BSC Testnet (97) by default**; `-PstagingChain=mainnet` for BSC Mainnet (56) | **BSC Testnet (97) by default**; `-PuatChain=mainnet` for BSC Mainnet (56) | BSC Mainnet (56) only |
+| In-app network switch | Yes (Profile > Network) | Yes (Profile > Network) | Yes (Profile > Network) | No |
+| Cleartext HTTP | `10.0.2.2`, `127.0.0.1`, `18.142.108.53` | `18.142.108.53` only | `18.142.108.53` only | None (HTTPS only) |
+| Minified, not debuggable | No | Yes | Yes | Yes |
+| Signing | Debug key | Release key when configured, otherwise the debug key | Release key when configured, otherwise the debug key | Release key (unsigned without it) |
+| Developer options in Profile | Yes | No | No | No |
 
 All of these values live in `app/build.gradle.kts` (BuildConfig fields) and the per-build-type
-resources under `app/src/debug` and `app/src/staging`. No URL or chain id is written in the Kotlin
-code, so you never edit source to change environment.
+resources under `app/src/debug`, `app/src/staging` and `app/src/uat`. No URL or chain id is written
+in the Kotlin code, so you never edit source to change environment.
 
-The build refuses to configure if release is not chain 56, if debug is chain 56, if staging is not
-97 or 56, or if release could switch chain at runtime.
+The build refuses to configure if release is not chain 56, if debug is chain 56, if staging or uat
+is not 97 or 56, or if release could switch chain at runtime.
 
 An optional fourth build type, `sandbox`, appears only when `app/sandbox.properties` exists (local
 zero-cost sandbox, chain 31337). It is not part of the release process.
@@ -161,8 +162,8 @@ installing a build from another machine). A debug-key AAB cannot be uploaded to 
 Profile > **Network** shows the chain in use and lets you pick BSC Testnet (97) or BSC Mainnet (56).
 The choice is stored and the app restarts to apply it. Signing, the RPC node, token contracts and
 explorer links follow the choice. Balances, history and token lists come from the server, which
-stays on its own chain, so pick the chain the staging server runs on. The row exists only in debug
-and staging builds.
+stays on its own chain, so pick the chain the staging server runs on. The row exists only in debug,
+staging and UAT builds.
 
 ### Firebase in staging
 
@@ -179,6 +180,44 @@ app/src/staging/google-services.json
 The file is git-ignored. The next build detects it (`BuildConfig.FIREBASE_ENABLED=true`). The same
 rule applies to every build type except release: a variant whose Firebase file does not list its
 application id builds with Firebase off and prints a line saying so.
+
+## 4a. UAT build for user-acceptance testing
+
+UAT is the last check before production: business users and testers accept a release candidate
+on a build that behaves like production (minified, not debuggable) but points at a test server.
+UAT builds are made from the `uat` branch. The app installs next to staging and production
+(`com.app.ezipaycoin.uat`, named **Ezipay Coin UAT**, purple icon background), so one device can
+hold all three.
+
+> **UAT runs on BSC TESTNET (chain 97) by default**, like staging.
+
+**Server.** There is no UAT server yet. Until there is, UAT uses the staging server
+`http://18.142.108.53/api/v1/`, and every UAT build says so:
+
+```
+UAT has no server of its own yet: using the staging server http://18.142.108.53/api/v1/. Set -PuatApiBaseUrl=... (or uatApiBaseUrl in ~/.gradle/gradle.properties) once a UAT server exists.
+```
+
+Once a UAT server exists, pass `-PuatApiBaseUrl=https://<uat host>/api/v1/` (keep the trailing `/`)
+or put `uatApiBaseUrl=...` in `~/.gradle/gradle.properties`. An HTTPS host needs nothing else. A
+plain-HTTP host other than `18.142.108.53` also needs a `<domain>` line in
+`app/src/uat/res/xml/network_security_config.xml`.
+
+### Build
+
+```bash
+./gradlew :app:assembleUat      # APK: app/build/outputs/apk/uat/app-uat.apk
+./gradlew :app:bundleUat        # AAB: app/build/outputs/bundle/uat/app-uat.aab
+```
+
+| Option | Effect |
+|---|---|
+| `-PuatChain=mainnet` | Build for BSC Mainnet (56). **Real funds.** Default is `testnet`. |
+| `-PuatApiBaseUrl=https://host/api/v1/` | The UAT server (see above). |
+
+Signing, installing, the in-app network switch and Firebase work exactly as for staging (section 4),
+with `uat` in place of `staging`: the Firebase file is `app/src/uat/google-services.json` and must
+list `com.app.ezipaycoin.uat`; until then UAT builds with push and social sign-up switched off.
 
 ## 5. Production release
 
@@ -206,6 +245,7 @@ Before uploading, install the release APK on a device and check sign-in, balance
 |---|---|---|
 | `debug` | `app/src/debug/google-services.json`, then `app/google-services.json` | `com.app.ezipaycoin.debug` (otherwise debug keeps `com.app.ezipaycoin`) |
 | `staging` | `app/src/staging/google-services.json`, then `app/google-services.json` | `com.app.ezipaycoin.staging` |
+| `uat` | `app/src/uat/google-services.json`, then `app/google-services.json` | `com.app.ezipaycoin.uat` |
 | `release` | `app/src/release/google-services.json`, then `app/google-services.json` | `com.app.ezipaycoin` |
 
 None of these files is committed. Ask the project owner for them.
@@ -246,7 +286,7 @@ versionName = "1.1.0"
   testing uploads and re-uploads after a rejected build.
 - `versionName` is what users see. Use `MAJOR.MINOR.PATCH`: patch for fixes, minor for features,
   major for breaking changes.
-- Debug and staging add `-debug` / `-staging` to the version name automatically.
+- Debug, staging and UAT add `-debug` / `-staging` / `-uat` to the version name automatically.
 - Change both in one commit on `dev` (for example "Bump version to 1.2.0 (4)") before building the
   release.
 

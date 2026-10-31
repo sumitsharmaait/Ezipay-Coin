@@ -21,10 +21,11 @@ installed or uploaded. CI jobs that only need to compile can run without them.
 |---|---|---|---|---|
 | `debug` | `com.app.ezipaycoin.debug` when a Firebase config knows it, else `com.app.ezipaycoin` | BSC testnet (97), testnet RPC and test token contracts | `http://10.0.2.2:5009/api/v1/` by default (the .NET API on the host; override with `-PapiBaseUrl=...`) | Never mainnet by default. Profile > Network switches chain at runtime. |
 | `staging` | `com.app.ezipaycoin.staging`, named "Ezipay Coin Staging" | **BSC testnet (97) by default**; `-PstagingChain=mainnet` for 56 | `http://18.142.108.53/api/v1/` (override with `-PstagingApiBaseUrl=...`) | Release-like (minified, not debuggable), installs next to production. Cleartext only to the staging host. Signed with the release key when configured, else the debug key. Profile > Network switches chain at runtime. |
+| `uat` | `com.app.ezipaycoin.uat`, named "Ezipay Coin UAT" | **BSC testnet (97) by default**; `-PuatChain=mainnet` for 56 | `-PuatApiBaseUrl=...`; until a UAT server exists, the staging server `http://18.142.108.53/api/v1/` (the build says so) | User-acceptance testing before production, built from the `uat` branch. Same rules as staging; installs next to staging and production. |
 | `release` | `com.app.ezipaycoin` | BSC mainnet (56) | `https://api.ezipaycoin.com/api/v1/` (override with `-PproductionApiBaseUrl=https://...`) | Minified, no logging, no cleartext, no chain switch. Needs the signing properties above. |
 | `sandbox` | as debug | Local chain (31337) | The local sandbox in `ezipay-coin-platform` | Exists only on the `sandbox` branch, where `app/sandbox.properties` is present. Its values never reach a release build. |
 
-The build fails at configuration if release is not chain 56, debug is chain 56, staging is not 97
+The build fails at configuration if release is not chain 56, debug is chain 56, staging or uat is not 97
 or 56, or release could switch chain at runtime.
 
 Building, installing and publishing each build type, step by step: [PUBLISH_GUIDE.md](PUBLISH_GUIDE.md).
@@ -43,6 +44,7 @@ Each build type uses its own Firebase project, so test pushes never reach produc
   the file in use (the first of the two that exists) has a client for `com.app.ezipaycoin.debug`; otherwise the build warns and
   keeps the release id.
 - `staging`: `app/src/staging/google-services.json` with a client for `com.app.ezipaycoin.staging`.
+- `uat`: `app/src/uat/google-services.json` with a client for `com.app.ezipaycoin.uat`.
 
 Firebase is optional except in release. When the file a variant uses has no client for its
 application id, the variant builds with `BuildConfig.FIREBASE_ENABLED=false`: no push token and no
@@ -84,6 +86,6 @@ Coverage and the written test report, and the instrumented tests, are described 
 
 ## More
 
-- [PUBLISH_GUIDE.md](PUBLISH_GUIDE.md): build types, the local server, staging builds for the team, signing, versions and Google Play
+- [PUBLISH_GUIDE.md](PUBLISH_GUIDE.md): build types, the local server, staging and UAT builds for the team, signing, versions and Google Play
 - [docs/production-readiness.md](docs/production-readiness.md): what changed, the security model and what is deferred
 - [docs/feature-inventory.md](docs/feature-inventory.md): every screen and tile and its status
