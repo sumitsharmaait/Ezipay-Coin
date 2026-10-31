@@ -37,6 +37,29 @@ class BannerPolicyTest {
     }
 
     @Test
+    fun `zone-less dates are read as UTC`() {
+        // now is 12:00Z; a zone-less end of 11:59:59 is already over, 12:00:01 is not.
+        val over = banner(1, ends = "2026-10-31T11:59:59")
+        val open = banner(2, ends = "2026-10-31T12:00:01.1234567")
+        val notYet = banner(3, starts = "2026-10-31T12:00:01")
+        assertEquals(listOf(2), BannerPolicy.select(listOf(over, open, notYet), now).map { it.id })
+    }
+
+    @Test
+    fun `Z and offset dates give the same result as zone-less UTC`() {
+        val z = banner(1, starts = "2026-10-31T00:00:00Z", ends = "2026-10-31T12:00:01Z")
+        val offset = banner(2, starts = "2026-10-31T02:00:00+02:00", ends = "2026-10-31T14:00:01+02:00")
+        val bare = banner(3, starts = "2026-10-31T00:00:00", ends = "2026-10-31T12:00:01")
+        assertEquals(listOf(1, 2, 3), BannerPolicy.select(listOf(z, offset, bare), now).map { it.id })
+        val expired = listOf(
+            banner(4, ends = "2026-10-31T12:00:00Z"),
+            banner(5, ends = "2026-10-31T14:00:00+02:00"),
+            banner(6, ends = "2026-10-31T12:00:00"),
+        )
+        assertEquals(emptyList<Int>(), BannerPolicy.select(expired, now).map { it.id })
+    }
+
+    @Test
     fun `cta follows the destination feature`() {
         val on = setOf(Feature.EARN_CHECKIN, Feature.EARN_TASKS)
         assertEquals(BannerTarget.EARN, BannerPolicy.resolveCta(banner(route = "earn"), on))
