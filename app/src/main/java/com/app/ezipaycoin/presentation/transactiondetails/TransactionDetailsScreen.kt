@@ -130,7 +130,7 @@ fun TransactionDetailsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    item.from.shortenAddress(),
+                    item.from.orEmpty().shortenAddress(),
                     style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor)
                 )
                 Icon(
@@ -140,7 +140,7 @@ fun TransactionDetailsScreen(
                     modifier = Modifier.size(24.dp)
                 )
                 Text(
-                    item.to.shortenAddress(),
+                    item.to.orEmpty().shortenAddress(),
                     style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor),
                     modifier = Modifier
                         .background(
@@ -198,7 +198,7 @@ fun TransactionDetailsScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(item.status, style = MaterialTheme.typography.bodyLarge.copy(color = TextPrimaryColor))
+                Text(item.status.orEmpty(), style = MaterialTheme.typography.bodyLarge.copy(color = TextPrimaryColor))
             }
 
         }

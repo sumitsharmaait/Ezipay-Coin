@@ -183,7 +183,7 @@ private fun TransactionListWithPagination(
 
 /** The other side of the transfer: the recipient for sent items, the sender for received ones. */
 internal fun TransactionsResponse.TransactionsItem.counterparty(): String =
-    if (type.equals("send", true)) to else from
+    (if (type.equals("send", true)) to else from).orEmpty()
 
 @Composable
 private fun TransactionItemRow(
@@ -222,13 +222,15 @@ private fun TransactionItemRow(
                 modifier = Modifier.padding(top = 4.dp),
                 style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor.copy(alpha = 0.5f))
             )
+            item.fiatLabel?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor.copy(alpha = 0.5f))
+                )
+            }
         }
         Text(
-            text = if (item.type.equals(
-                    "send",
-                    true
-                )
-            ) "-" + item.formattedAmount else "+" + item.formattedAmount,
+            text = item.amountLabel,
             style = MaterialTheme.typography.titleMedium.copy(
                 color = if (item.type.equals(
                         "send",

@@ -198,7 +198,7 @@ fun WalletScreen(
                     ) {
                         it.forEach { item ->
                             DropdownMenuItem(
-                                text = { Text(item.symbol) },
+                                text = { Text(item.symbol.orEmpty()) },
                                 onClick = {
                                     sharedViewModel.onEvent(SharedEvent.CryptoOptionChanged(item))
                                     viewModel.onEvent(WalletEvent.CurrentOptionChanged(item))
@@ -526,7 +526,7 @@ private fun TokenRow(
 
         // Token Name
         Text(
-            tokenInfo.symbol,
+            tokenInfo.symbol.orEmpty(),
             style = MaterialTheme.typography.titleSmall.copy(color = Color.White),
             modifier = Modifier.weight(1f)
         )

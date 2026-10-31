@@ -133,7 +133,7 @@ class WithdrawViewModel(
                 val req = WithdrawalTransferPayoutRequest(
                     InvoiceNumber = invoiceNumber,
                     NetworkValue = _uiState.value.networkInfo,
-                    TokenValue = tokenId.symbol,
+                    TokenValue = tokenId.symbol.orEmpty(),
                     Towalletaddress = _uiState.value.toAddress,
                     Amount = _uiState.value.amount,
                     Contractaddress = tokenId.contractAddress.toString()

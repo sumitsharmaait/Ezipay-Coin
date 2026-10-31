@@ -12,9 +12,9 @@ data class DashboardResponse(
     @Serializable
     data class Crypto(
         val tokenId: Int?,
-        val tokenLogo: String,
+        val tokenLogo: String?,
         val contractAddress: String?,
-        val symbol: String,
+        val symbol: String?,
         val balance: Double,
         val fiatValue: Double
     ) {

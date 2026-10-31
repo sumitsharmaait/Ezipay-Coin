@@ -74,7 +74,7 @@ class DepositViewModel(
                     val req = WalletInfoDepositeTokenRequest(
                         InvoiceNumber = invoiceNumber,
                         NetworkValue = res.result[0].NetworkValue,
-                        TokenValue = tokenId.symbol,
+                        TokenValue = tokenId.symbol.orEmpty(),
                         RecipientWalletAddressCrypto = _uiState.value.walletAddress
                     )
                     val walletInfoRes = repository.getWalletInfoDepositeToken(req, PaymentsProxy.newIdempotencyKey())
