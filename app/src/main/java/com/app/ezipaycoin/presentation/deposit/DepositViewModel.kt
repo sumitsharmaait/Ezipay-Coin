@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.presentation.deposit
 
+import com.app.ezipaycoin.data.remote.api.PaymentsProxy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
@@ -75,7 +76,7 @@ class DepositViewModel(
                         TokenValue = tokenId.symbol,
                         RecipientWalletAddressCrypto = _uiState.value.walletAddress
                     )
-                    val walletInfoRes = repository.getWalletInfoDepositeToken(req)
+                    val walletInfoRes = repository.getWalletInfoDepositeToken(req, PaymentsProxy.newIdempotencyKey())
                     if (walletInfoRes.isSuccess) {
                         walletInfoRes.result.WalletAddress?.let { address ->
                             _uiState.update {

@@ -23,7 +23,6 @@ data class MainState(
         "Transactions",
         "TransactionDetails",
         "Deposit",
-        "DepositViaCard",
         "Withdraw",
         "WalletDetails",
         "WebViewScreen"
