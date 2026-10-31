@@ -22,6 +22,7 @@ object ApiClient {
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .addInterceptor(AuthInterceptor())
+        .authenticator(TokenAuthenticator())
         .addInterceptor(logging)
         .build()
 
@@ -31,6 +32,15 @@ object ApiClient {
         .writeTimeout(30, TimeUnit.SECONDS)
         .addInterceptor(logging)
         .build()
+
+    /** No authenticator and no stored token: used to sign in again after a 401 without recursing. */
+    val authRetrofit: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client1)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
 
     val retrofit: Retrofit by lazy {
         Retrofit.Builder()

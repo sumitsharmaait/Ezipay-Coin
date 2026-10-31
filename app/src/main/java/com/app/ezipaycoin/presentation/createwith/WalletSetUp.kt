@@ -58,6 +58,7 @@ import com.app.ezipaycoin.ui.theme.GoldAccentColor
 import com.app.ezipaycoin.ui.theme.GoldTextColor
 import com.app.ezipaycoin.ui.theme.OnboardingGold1
 import com.app.ezipaycoin.utils.ResponseState
+import com.app.ezipaycoin.utils.SocialProfile
 import com.facebook.AccessToken
 import com.facebook.CallbackManager
 import com.facebook.FacebookCallback
@@ -104,9 +105,7 @@ fun WalletSetUp(
                 handleFacebookAccessToken(
                     result.accessToken,
                     auth,
-                    onSuccess = { name, email, pic ->
-                        viewModel.onEvent(WalletSetupEvent.SocialDetailsFetched(name, email, pic))
-                    })
+                    onResult = { viewModel.onEvent(it) })
             }
 
             override fun onCancel() {
@@ -134,17 +133,7 @@ fun WalletSetUp(
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         auth.currentUser?.let {
-                            val displayName = it.displayName
-                            val email = it.email
-                            if (!displayName.isNullOrEmpty() && !email.isNullOrEmpty()) {
-                                viewModel.onEvent(
-                                    WalletSetupEvent.SocialDetailsFetched(
-                                        displayName,
-                                        email,
-                                        it.photoUrl.toString()
-                                    )
-                                )
-                            }
+                            viewModel.onEvent(socialEvent(it.displayName, it.email, it.photoUrl?.toString()))
                         }
                     } else {
                         Log.e("GoogleSignIn", "Firebase Auth failed", task.exception)
@@ -375,21 +364,25 @@ fun ClickableRegisterNowText() {
 }
 
 
+/** A usable account starts wallet creation; one without an email tells the user why nothing happened. */
+private fun socialEvent(displayName: String?, email: String?, photoUrl: String?): WalletSetupEvent =
+    when (val profile = SocialProfile.from(displayName, email, photoUrl)) {
+        is SocialProfile.Result.Ready ->
+            WalletSetupEvent.SocialDetailsFetched(profile.name, profile.email, profile.picture)
+        is SocialProfile.Result.Unusable -> WalletSetupEvent.SocialDetailsUnavailable(profile.message)
+    }
+
 private fun handleFacebookAccessToken(
     token: AccessToken,
     auth: FirebaseAuth,
-    onSuccess: (name: String, email: String, pic: String) -> Unit
+    onResult: (WalletSetupEvent) -> Unit
 ) {
     val credential = FacebookAuthProvider.getCredential(token.token)
     auth.signInWithCredential(credential)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 auth.currentUser?.let {
-                    val displayName = it.displayName
-                    val email = it.email
-                    if (!displayName.isNullOrEmpty() && !email.isNullOrEmpty()) {
-                        onSuccess(displayName, email, it.photoUrl.toString())
-                    }
+                    onResult(socialEvent(it.displayName, it.email, it.photoUrl?.toString()))
                 }
             } else {
                 Log.e("FacebookSignIn", "Firebase Auth failed", task.exception)

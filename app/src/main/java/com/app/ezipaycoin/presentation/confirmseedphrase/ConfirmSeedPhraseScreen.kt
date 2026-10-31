@@ -95,6 +95,8 @@ fun ConfirmSeedPhraseScreen(
                     onClick = {
                         if (state.responseState is ResponseState.Success) {
                             navController.navigate(Screen.Auth.WalletSuccess)
+                        } else if (state.responseState is ResponseState.Error) {
+                            viewModel.retry()
                         }
                     },
                     modifier = Modifier

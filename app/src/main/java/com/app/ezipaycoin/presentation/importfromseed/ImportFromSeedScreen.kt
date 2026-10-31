@@ -204,6 +204,8 @@ fun ImportFromSeedScreen(
 
             if (state.responseState is ResponseState.Loading) {
                 CircularProgressIndicator(color = OnboardingGold1)
+            } else if (state.responseState is ResponseState.Error) {
+                FieldErrorText(error = (state.responseState as ResponseState.Error).message)
             }
         }
     }

@@ -1,7 +1,7 @@
 package com.app.ezipaycoin.presentation.confirmseedphrase
 
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
-import com.app.ezipaycoin.data.remote.dto.response.NonceResponse
+import com.app.ezipaycoin.data.remote.dto.response.LoginResponse
 import com.app.ezipaycoin.utils.ResponseState
 
 data class ConfirmSeedPhraseState(
@@ -10,6 +10,6 @@ data class ConfirmSeedPhraseState(
     val confirmedIndex : Int = 0,
     val distractSeeds : List<String> = emptyList(),
     var confirmedSeeds : MutableList<String> = mutableListOf(),
-    var responseState: ResponseState<BaseResponse<NonceResponse>> = ResponseState.Idle
+    var responseState: ResponseState<BaseResponse<LoginResponse>> = ResponseState.Idle
 
 )
