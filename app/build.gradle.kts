@@ -104,7 +104,8 @@ val teamBuilds = listOf(
     // staging server until uatApiBaseUrl is set.
     TeamBuild("uat", "UAT", uatApiBaseUrl ?: stagingServerUrl, uatApiBaseUrl == null, teamChain("uatChain")),
 )
-val productionApiBaseUrl = gradleValue("productionApiBaseUrl") ?: "https://api.ezipaycoin.com/api/v1/"
+val productionServerUrl = "https://api.ezipaycoin.com/api/v1/"
+val productionApiBaseUrl = gradleValue("productionApiBaseUrl") ?: productionServerUrl
 check(productionApiBaseUrl.startsWith("https://")) { "productionApiBaseUrl must be an https:// URL" }
 
 android {
@@ -126,7 +127,7 @@ android {
         // Production endpoints and contracts (BSC mainnet). Debug, staging, uat and sandbox override
         // them; release always ships these.
         buildConfigField("boolean", "SANDBOX", "false")
-        buildConfigField("String", "API_BASE_URL", "\"https://api.ezipaycoin.com/api/v1/\"")
+        buildConfigField("String", "API_BASE_URL", "\"$productionServerUrl\"")
         chain(bscMainnet)
         knownChain("TESTNET", bscTestnet)
         knownChain("MAINNET", bscMainnet)
@@ -172,7 +173,7 @@ android {
                 "proguard-rules.pro"
             )
             signingConfigs.findByName("release")?.let { signingConfig = it }
-            // -PproductionApiBaseUrl=https://... moves release to another HTTPS host; the default is production.
+            // -PproductionApiBaseUrl=https://... moves release to another HTTPS host (the build warns); the default is production.
             buildConfigField("String", "API_BASE_URL", "\"$productionApiBaseUrl\"")
         }
 
@@ -309,6 +310,12 @@ gradle.taskGraph.whenReady {
         if (!hasReleaseSigningConfig()) {
             logger.lifecycle("${team.title} is signed with the debug key (no EZIPAY_RELEASE_* values): fine for team installs, not for Play uploads.")
         }
+    }
+    if (runs("release") && productionApiBaseUrl != productionServerUrl) {
+        logger.warn(
+            "WARNING: release targets $productionApiBaseUrl, not the production server $productionServerUrl " +
+                "(-PproductionApiBaseUrl). Do not upload this build to Google Play."
+        )
     }
     firebaseOffVariants.forEach { (variant, applicationId) ->
         if (runs(variant)) {
