@@ -3,7 +3,13 @@ package com.app.ezipaycoin.presentation.dashboard.pay
 import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
 
 sealed class PayEvent {
-    data class PayAmount(val crypto: String) : PayEvent()
+    data class PayAmount(
+        val crypto: String,
+        /** Balances from the dashboard, used for the pre-sign funds check. Null skips that check. */
+        val tokenBalance: Double? = null,
+        val bnbBalance: Double? = null,
+        val contractAddress: String? = null
+    ) : PayEvent()
     data class AmountChanged(val amount: String) : PayEvent()
     data class ExpandCurrencyOptions(val isExpand: Boolean) : PayEvent()
     data class CurrentOptionChanged(val currency: DashboardResponse.Crypto) : PayEvent()
@@ -16,5 +22,7 @@ sealed class PayEvent {
     data object QRDispose : PayEvent()
     data class UtilityItemChanged(val utilityItem: String) : PayEvent()
     data object DismissDialog : PayEvent()
+    data object ConfirmPayment : PayEvent()
+    data object CancelConfirmation : PayEvent()
 }
 
