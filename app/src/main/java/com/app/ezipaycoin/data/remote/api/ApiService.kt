@@ -185,4 +185,48 @@ interface ApiService {
         @Body request: MintAllowlistRequest
     ): BaseResponse<NftMintResponse>
 
+
+    // ---------- App config, Earn, Staking reads, Learn (content branches) ----------
+
+    @GET("Earn/summary")
+    suspend fun getEarnSummary(
+        @Query("status") status: String,
+        @Query("chainId") chainId: Int
+    ): BaseResponse<com.app.ezipaycoin.data.remote.dto.response.RewardSummaryResponse>
+
+    @GET("Earn/checkin/status")
+    suspend fun getCheckInStatus(
+        @Query("month") month: String
+    ): BaseResponse<com.app.ezipaycoin.data.remote.dto.response.CheckInStatusResponse>
+
+    /** A GET that records today's check-in; send an Idempotency-Key so a retry cannot double-grant. */
+    @GET("Earn/checkin")
+    suspend fun checkIn(
+        @Query("date") date: String,
+        @retrofit2.http.Header("Idempotency-Key") idempotencyKey: String
+    ): BaseResponse<com.app.ezipaycoin.data.remote.dto.response.CheckInResponse>
+
+    @GET("Earn/checkin/tasks")
+    suspend fun getDailyTasks(
+        @Query("date") date: String
+    ): BaseResponse<com.app.ezipaycoin.data.remote.dto.response.DailyTasksResponse>
+
+    @POST("Earn/checkin/tasks/{taskId}/complete")
+    suspend fun completeTask(
+        @Path("taskId") taskId: Int,
+        @Body request: com.app.ezipaycoin.data.remote.dto.request.CompleteTaskRequest,
+        @retrofit2.http.Header("Idempotency-Key") idempotencyKey: String
+    ): BaseResponse<com.app.ezipaycoin.data.remote.dto.response.CompleteTaskResponse>
+
+    @GET("earn/Staking/pools")
+    suspend fun getStakingPools(
+        @Query("chainId") chainId: Int
+    ): BaseResponse<List<com.app.ezipaycoin.data.remote.dto.response.StakingPoolResponse>>
+
+    @GET("learn")
+    suspend fun getLearn(): BaseResponse<List<com.app.ezipaycoin.data.remote.dto.response.LearnItemResponse>>
+
+    @GET("App/config")
+    suspend fun getAppConfig(): BaseResponse<com.app.ezipaycoin.data.remote.dto.response.AppConfigResponse>
+
 }

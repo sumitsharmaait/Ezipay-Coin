@@ -20,6 +20,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.app.ezipaycoin.config.Feature
+import com.app.ezipaycoin.config.FeatureFlags
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -116,13 +120,17 @@ fun NftHoldingsSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Always available, whatever the holdings state.
-        AppGreyButton(
-            labelColor = Color.White,
-            label = "Mint an NFT",
-            onClick = { onEvent(NftEvent.MintClicked) },
-            modifier = Modifier.fillMaxWidth()
-        )
+        // Minting is signed by the platform on the server today, so the entry stays hidden
+        // until the backend flow is the user-signed one (Feature.NFT_MINT).
+        val mintEnabled by FeatureFlags.enabled.collectAsState()
+        if (Feature.NFT_MINT in mintEnabled) {
+            AppGreyButton(
+                labelColor = Color.White,
+                label = "Mint an NFT",
+                onClick = { onEvent(NftEvent.MintClicked) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 
