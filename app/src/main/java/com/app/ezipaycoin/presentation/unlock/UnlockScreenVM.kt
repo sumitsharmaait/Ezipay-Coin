@@ -145,7 +145,6 @@ class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
     private suspend fun fetchFcmToken(): String = suspendCancellableCoroutine { cont ->
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             val token = if (task.isSuccessful) task.result.orEmpty() else ""
-            Log.d("FCM", "Current token: $token")
             if (cont.isActive) cont.resume(token)
         }
     }

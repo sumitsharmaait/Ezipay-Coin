@@ -14,3 +14,10 @@
 .cxx
 local.properties
 settings.gradle.kts
+
+# Signing material and per-developer config
+*.jks
+*.keystore
+coin_keystore
+/app/google-services.json
+/app/sandbox.properties

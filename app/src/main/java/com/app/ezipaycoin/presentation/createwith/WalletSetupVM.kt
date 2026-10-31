@@ -70,7 +70,6 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
                 FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         token = task.result
-                        Log.d("FCM", "Current token: $token")
                     }
                 }
                 val privateKey = wallet.getKeyForCoin(CoinType.ETHEREUM)
