@@ -48,7 +48,9 @@ import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -83,6 +85,10 @@ import androidx.compose.ui.unit.times
 import androidx.navigation.NavController
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
+import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
+import com.app.ezipaycoin.utils.validation.AmountValidator
+import java.math.BigDecimal
+import java.math.RoundingMode
 import com.app.ezipaycoin.data.remote.dto.response.TransactionsResponse
 import com.app.ezipaycoin.presentation.shared.SharedEvent
 import com.app.ezipaycoin.presentation.shared.SharedState
@@ -261,7 +267,7 @@ private fun DirectPayContent(
             state.toAddressError?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.titleSmall.copy(color = TextHintColor),
+                    style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.error),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 4.dp, top = 4.dp)
@@ -601,6 +607,14 @@ private fun UtilityGridItem(item: UtilityItemData, isSelected: Boolean, onClick:
     }
 }
 
+/** Fiat value of [amount] of the selected token, from the dashboard's fiatValue/balance ratio. */
+private fun fiatEquivalent(crypto: DashboardResponse.Crypto?, amount: String): String? {
+    if (crypto == null || crypto.balance <= 0.0) return null
+    val value = AmountValidator.parse(amount) ?: return null
+    val ratio = BigDecimal.valueOf(crypto.fiatValue).divide(BigDecimal.valueOf(crypto.balance), 18, RoundingMode.HALF_UP)
+    return value.multiply(ratio).setScale(2, RoundingMode.HALF_UP).toPlainString()
+}
+
 @Composable
 private fun PaymentDetailsSection(
     vm: PayViewModel,
@@ -656,10 +670,8 @@ private fun PaymentDetailsSection(
                 horizontalArrangement = Arrangement.End
             ) {
                 Text(
-                    "$",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = TextPrimaryColor
-                    )
+                    sharedState.selectedCrypto?.symbol.orEmpty(),
+                    style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor)
                 )
                 Spacer(Modifier.width(4.dp))
                 TextField(
@@ -703,10 +715,22 @@ private fun PaymentDetailsSection(
 //            }
         }
 
+        val fiatEstimate = fiatEquivalent(sharedState.selectedCrypto, state.amount)
+        if (fiatEstimate != null) {
+            Text(
+                text = "\u2248 $" + fiatEstimate,
+                style = MaterialTheme.typography.bodySmall.copy(color = TextHintColor),
+                textAlign = TextAlign.End,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 4.dp, top = 4.dp)
+            )
+        }
+
         state.amountError?.let {
             Text(
                 text = it,
-                style = MaterialTheme.typography.titleSmall.copy(color = TextHintColor),
+                style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.error),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 4.dp, top = 4.dp)
@@ -771,6 +795,28 @@ private fun SlideToPayButtonSection(
             style = MaterialTheme.typography.titleSmall.copy(color = TextHintColor),
             modifier = Modifier.align(Alignment.Center) // Center the helper text
         )
+
+        state.confirmation?.let { c ->
+            AlertDialog(
+                onDismissRequest = { vm.onEvent(PayEvent.CancelConfirmation) },
+                title = { Text("Confirm payment") },
+                text = {
+                    Column {
+                        Text("Send ${c.amount} ${c.symbol}")
+                        Spacer(Modifier.height(8.dp))
+                        Text("To: ${c.to}")
+                        Spacer(Modifier.height(8.dp))
+                        Text("Estimated network fee: ${c.feeBnb} BNB")
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { vm.onEvent(PayEvent.ConfirmPayment) }) { Text("Confirm") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { vm.onEvent(PayEvent.CancelConfirmation) }) { Text("Cancel") }
+                }
+            )
+        }
 
         when (state.payMoneyResponse) {
             is ResponseState.Loading -> {
@@ -847,7 +893,15 @@ private fun SlideToPayButtonSection(
                         if (offsetX > 450f) {
                             if (state.payMoneyResponse !== ResponseState.Loading && state.selectedTab == PayScreenTab.DirectPay) {
                                 sharedState.selectedCrypto?.symbol?.let {
-                                    vm.onEvent(PayEvent.PayAmount(it))
+                                    val coins = sharedState.dashboardResponse?.crypto
+                                    vm.onEvent(
+                                        PayEvent.PayAmount(
+                                            crypto = it,
+                                            contractAddress = sharedState.selectedCrypto?.contractAddress,
+                                            tokenBalance = sharedState.selectedCrypto?.balance,
+                                            bnbBalance = coins?.firstOrNull { c -> c.symbol.equals("BNB", true) }?.balance
+                                        )
+                                    )
                                 }
                             }
                             offsetX = 0f

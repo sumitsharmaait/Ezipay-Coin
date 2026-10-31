@@ -78,7 +78,7 @@ fun Dialogue(isError: Boolean, msg: String, onDismissRequest: () -> Unit) {
                 ) {
                     Icon(
                         imageVector = if (isError) Icons.Filled.ErrorOutline else Icons.Filled.Check,
-                        contentDescription = "Success",
+                        contentDescription = if (isError) "Error" else "Success",
                         tint = if (isError) sendAmountTextColor else DialogIconCircleGreen,
                         modifier = Modifier.size(40.dp)
                     )

@@ -10,8 +10,13 @@ import com.app.ezipaycoin.domain.repository.TransactionsRepository
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.WalletManager
 import com.app.ezipaycoin.utils.WalletManager.CHAIN_ID
+import com.app.ezipaycoin.utils.validation.AddressValidator
+import com.app.ezipaycoin.utils.validation.CoinKind
+import com.app.ezipaycoin.utils.validation.ReceiptPolling
+import kotlinx.coroutines.CancellationException
+import com.app.ezipaycoin.utils.validation.AmountValidator
+import com.app.ezipaycoin.utils.validation.TxErrorMapper
 import com.google.protobuf.ByteString
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,25 +36,40 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
     val uiState: StateFlow<PayState> = _uiState.asStateFlow()
 
 
+    // Set while a payment is being prepared, signed or broadcast; blocks a second submission.
+    private var paymentInFlight = false
+    private var ownAddress: String? = null
+
     init {
         getTransactions()
+        viewModelScope.launch {
+            ownAddress = UserPreferencesRepository.userPreferencesFlow.data.first().walletAddress
+        }
     }
 
     fun onEvent(event: PayEvent) {
         when (event) {
             is PayEvent.PayAmount -> {
-                if (validateForm()) {
-                    processPayment(event.crypto)
+                if (paymentInFlight) return
+                if (_uiState.value.pendingTxHash != null) {
                     _uiState.update {
-                        _uiState.value.copy(broadcastTransaction = true)
+                        it.copy(payMoneyResponse = ResponseState.Error("Your previous payment is still confirming. Please wait before sending again"))
                     }
-
+                    return
                 }
+                if (validateForm(event)) prepare(event)
+            }
+
+            is PayEvent.ConfirmPayment -> confirm()
+
+            is PayEvent.CancelConfirmation -> {
+                request = null
+                _uiState.update { it.copy(confirmation = null) }
             }
 
             is PayEvent.AmountChanged -> {
                 _uiState.update {
-                    it.copy(amount = event.amount)
+                    it.copy(amount = event.amount, amountError = null)
                 }
             }
 
@@ -69,7 +89,10 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
 
             is PayEvent.ToAddressChanged -> {
                 _uiState.update {
-                    it.copy(toAddress = event.toAddress)
+                    it.copy(
+                        toAddress = event.toAddress,
+                        toAddressError = AddressValidator.validateWhileTyping(event.toAddress, ownAddress)
+                    )
                 }
 
             }
@@ -96,7 +119,11 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
 
             is PayEvent.QRSuccess -> {
                 _uiState.update {
-                    it.copy(isScanning = false, toAddress = event.qr)
+                    it.copy(
+                        isScanning = false,
+                        toAddress = event.qr,
+                        toAddressError = AddressValidator.validateWhileTyping(event.qr, ownAddress)
+                    )
                 }
             }
 
@@ -115,144 +142,226 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
     }
 
 
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun processPayment(crypto: String) {
-        viewModelScope.launch {
-            val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
-            if (prefs.walletAddress == null || prefs.walletPrivateKey == null) {
-                return@launch
-            }
-            _uiState.update {
-                it.copy(
-                    payMoneyResponse = ResponseState.Loading,
-                )
-            }
-            try {
-                val resNonce =
-                    async { repository.getTransactionCount(getNonceRequest(prefs.walletAddress)) }.await()
-                val resGasPrice =
-                    async { repository.getTransactionCount(getGasPriceRequest()) }.await()
+    /** A payment the user has asked for, held while the confirmation dialog is open. */
+    private class Request(
+        val to: String,
+        val amount: BigDecimal,
+        val amountWei: BigInteger,
+        val symbol: String,
+        val kind: CoinKind,
+        val tokenBalance: Double?,
+        val bnbBalance: Double?
+    )
 
-                if (null == resNonce.result || null == resGasPrice.result) {
-                    var error = "Unknown Error"
-                    error = resGasPrice.error?.message ?: "Gas Price Error"
-                    error = resNonce.error?.message ?: "Nonce Error"
-                    _uiState.update {
-                        it.copy(
-                            payMoneyResponse = ResponseState.Error(
-                                error
-                            )
-                        )
-                    }
+    /** Chain parameters for one signing attempt. */
+    private class Quote(val nonce: String, val gasPrice: String, val gasLimit: String, val feeWei: BigInteger)
+
+    private class PayFailure(message: String) : Exception(message)
+
+    private var request: Request? = null
+
+    private fun prepare(event: PayEvent.PayAmount) {
+        val state = _uiState.value
+        val kind = CoinKind.resolve(
+            event.crypto, event.contractAddress,
+            WalletManager.EZPT_TOKEN_CONTRACT, WalletManager.USDT_TOKEN_CONTRACT
+        )
+        if (kind is CoinKind.Unsupported) {
+            _uiState.update { it.copy(payMoneyResponse = ResponseState.Error("${event.crypto} cannot be sent from the app yet")) }
+            return
+        }
+        val amount = AmountValidator.parse(state.amount) ?: return
+        val req = Request(
+            to = state.toAddress.trim(),
+            amount = amount,
+            amountWei = AmountValidator.toWei(amount),
+            symbol = event.crypto,
+            kind = kind,
+            tokenBalance = event.tokenBalance,
+            bnbBalance = event.bnbBalance
+        )
+        paymentInFlight = true
+        _uiState.update { it.copy(payMoneyResponse = ResponseState.Loading) }
+        viewModelScope.launch {
+            try {
+                val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
+                val from = prefs.walletAddress
+                if (from == null || prefs.walletPrivateKey == null) {
+                    _uiState.update { it.copy(payMoneyResponse = ResponseState.Idle) }
                     return@launch
                 }
-
-                if (crypto.equals("BNB", true)) {
-                    val resBnbGasLimit =
-                        async {
-                            repository.getEstimateGas(
-                                getBnbGasEstimateRequest(
-                                    prefs.walletAddress,
-                                    crypto
-                                )
-                            )
-                        }.await()
-
-                    if (null == resBnbGasLimit.result) {
-                        val msg =
-                            if (resBnbGasLimit.error?.message?.contains("insufficient funds") == true) {
-                                "Not enough BNB to cover network fees."
-                            } else {
-                                resBnbGasLimit.error?.message ?: "Gas Limit Error"
-                            }
-                        _uiState.update {
-                            it.copy(
-                                payMoneyResponse = ResponseState.Error(
-                                    msg
-                                )
-                            )
-                        }
-                        return@launch
-                    }
-
-                    val output = getBNBSignedHex(
-                        resNonce.result,
-                        prefs.walletPrivateKey,
-                        resGasPrice.result,
-                        resBnbGasLimit.result
-                    )
-                    if (!output.errorMessage.isNullOrBlank()) {
-                        _uiState.update {
-                            it.copy(
-                                payMoneyResponse = ResponseState.Error(
-                                    output.errorMessage
-                                )
-                            )
-                        }
-                        return@launch
-                    }
-                    transferPayment(output.encoded.toByteArray().toHexString())
-
-                } else {
-                    val amount =
-                        BigDecimal(_uiState.value.amount).multiply(BigDecimal("1000000000000000000"))
-                            .toBigInteger()
-                    val payload = encodeTransferPayload(_uiState.value.toAddress.trim(), amount)
-
-                    val resBnbGasLimit =
-                        async {
-                            repository.getEstimateGas(
-                                getBnbGasEstimateRequest(
-                                    prefs.walletAddress,
-                                    crypto,
-                                    payload.toHexString()
-                                )
-                            )
-                        }.await()
-
-                    if (null == resBnbGasLimit.result) {
-                        _uiState.update {
-                            it.copy(
-                                payMoneyResponse = ResponseState.Error(
-                                    resBnbGasLimit.error?.message ?: "Gas Limit Error"
-                                )
-                            )
-                        }
-                        return@launch
-                    }
-
-                    val signedHex = signedHexTransferPaymentTokens(
-                        resNonce.result,
-                        prefs.walletPrivateKey,
-                        crypto,
-                        payload,
-                        resBnbGasLimit.result,
-                        resGasPrice.result
-                    )
-                    if (!signedHex.errorMessage.isNullOrBlank()) {
-                        _uiState.update {
-                            it.copy(
-                                payMoneyResponse = ResponseState.Error(
-                                    signedHex.errorMessage
-                                )
-                            )
-                        }
-                        return@launch
-                    }
-                    transferPayment(signedHex.encoded.toByteArray().toHexString())
-                }
-
-            } catch (e: Exception) {
+                val quote = quote(req, from)
+                request = req
                 _uiState.update {
                     it.copy(
-                        payMoneyResponse = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                        payMoneyResponse = ResponseState.Idle,
+                        confirmation = PayConfirmation(
+                            to = req.to,
+                            amount = req.amount.toPlainString(),
+                            symbol = req.symbol,
+                            feeBnb = AmountValidator.weiToBnb(quote.feeWei).stripTrailingZeros().toPlainString()
                         )
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: PayFailure) {
+                _uiState.update { it.copy(payMoneyResponse = ResponseState.Error(e.message ?: TxErrorMapper.GENERIC)) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(payMoneyResponse = ResponseState.Error(TxErrorMapper.friendly(e))) }
+            } finally {
+                paymentInFlight = false
+            }
+        }
+    }
+
+    private fun confirm() {
+        val req = request ?: return
+        if (paymentInFlight) return
+        paymentInFlight = true
+        _uiState.update { it.copy(confirmation = null, payMoneyResponse = ResponseState.Loading) }
+        viewModelScope.launch {
+            try {
+                send(req)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: PayFailure) {
+                _uiState.update { it.copy(payMoneyResponse = ResponseState.Error(e.message ?: TxErrorMapper.GENERIC)) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(payMoneyResponse = ResponseState.Error(TxErrorMapper.friendly(e))) }
+            } finally {
+                request = null
+                paymentInFlight = false
+            }
+        }
+    }
+
+    /** Fetches nonce, gas price and gas limit, and checks the funds against the fee. */
+    private suspend fun quote(req: Request, from: String): Quote {
+        val nonce = repository.getTransactionCount(getNonceRequest(from))
+        val gasPrice = repository.getTransactionCount(getGasPriceRequest())
+        if (nonce.result == null || gasPrice.result == null) {
+            throw PayFailure(TxErrorMapper.friendly(nonce.error?.message ?: gasPrice.error?.message ?: "Network error"))
+        }
+        val payload = (req.kind as? CoinKind.Token)?.let { encodeTransferPayload(req.to, req.amountWei) }
+        val gas = repository.getEstimateGas(estimateRequest(from, req, payload))
+        if (gas.result == null) {
+            throw PayFailure(TxErrorMapper.friendly(gas.error?.message ?: "Gas limit error"))
+        }
+        val feeWei = BigInteger(gas.result.removePrefix("0x"), 16) * BigInteger(gasPrice.result.removePrefix("0x"), 16)
+        val fundsError = AmountValidator.validateFunds(
+            amount = req.amount,
+            symbol = req.symbol,
+            tokenBalance = req.tokenBalance?.let { BigDecimal(it.toString()) },
+            bnbBalance = req.bnbBalance?.let { BigDecimal(it.toString()) },
+            feeBnb = AmountValidator.weiToBnb(feeWei)
+        )
+        if (fundsError != null) throw PayFailure(fundsError)
+        return Quote(nonce.result, gasPrice.result, gas.result, feeWei)
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    private suspend fun send(req: Request) {
+        val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
+        val from = prefs.walletAddress
+        val key = prefs.walletPrivateKey
+        if (from == null || key == null) {
+            _uiState.update { it.copy(payMoneyResponse = ResponseState.Idle) }
+            return
+        }
+        // Nonce and fee are fetched again: they may have moved while the dialog was open.
+        val quote = quote(req, from)
+        val output = when (val kind = req.kind) {
+            is CoinKind.Token -> signedHexTransferPaymentTokens(
+                quote.nonce, key, kind.contract,
+                encodeTransferPayload(req.to, req.amountWei), quote.gasLimit, quote.gasPrice
+            )
+            else -> getBNBSignedHex(quote.nonce, key, quote.gasPrice, quote.gasLimit, req.to, req.amountWei)
+        }
+        if (!output.errorMessage.isNullOrBlank()) {
+            throw PayFailure(TxErrorMapper.GENERIC)
+        }
+        transferPayment(output.encoded.toByteArray().toHexString())
+    }
+
+    private suspend fun transferPayment(signedTxHex: String) {
+        val res = repository.payMoney(
+            BitPayRequest(
+                jsonrpc = "2.0",
+                method = "eth_sendRawTransaction",
+                params = listOf("0x$signedTxHex"),
+                id = "1"
+            )
+        )
+        val hash = res.result ?: throw PayFailure(TxErrorMapper.friendly(res.error?.message))
+
+        for (wait in ReceiptPolling.schedule()) {
+            delay(wait)
+            when (receiptStatus(hash)) {
+                true -> {
+                    onMined(success = true)
+                    return
+                }
+                false -> {
+                    onMined(success = false)
+                    return
+                }
+                null -> Unit
             }
         }
 
+        // Broadcast but not mined yet: tell the user it is pending, block a second send, keep watching.
+        _uiState.update {
+            it.copy(
+                pendingTxHash = hash,
+                payMoneyResponse = ResponseState.Success(
+                    "Payment sent and still confirming.\nDo not send it again. It will show in your history once confirmed.\n\nRef: ${hash.take(10)}...${hash.takeLast(6)}"
+                )
+            )
+        }
+        viewModelScope.launch {
+            repeat(60) {
+                delay(10_000)
+                val status = receiptStatus(hash)
+                if (status != null) {
+                    _uiState.update { it.copy(pendingTxHash = null) }
+                    getTransactions()
+                    return@launch
+                }
+            }
+            _uiState.update { it.copy(pendingTxHash = null) }
+        }
+    }
+
+    /** true = mined OK, false = reverted, null = no receipt yet (or the lookup failed). */
+    private suspend fun receiptStatus(hash: String): Boolean? = try {
+        val receipt = repository.getTransactionReceipt(
+            BitPayRequest(jsonrpc = "2.0", method = "eth_getTransactionReceipt", params = listOf(hash), id = "1")
+        ).result
+        when {
+            receipt == null -> null
+            receipt.status.equals("0x1", true) -> true
+            receipt.status.equals("0x0", true) -> false
+            else -> null
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun onMined(success: Boolean) {
+        _uiState.update {
+            if (success) {
+                it.copy(payMoneyResponse = ResponseState.Success("Transaction Successful."), amount = "", toAddress = "")
+            } else {
+                it.copy(payMoneyResponse = ResponseState.Error("Transaction Failed."))
+            }
+        }
+        viewModelScope.launch {
+            delay(3000)
+            getTransactions()
+        }
     }
 
     private fun getTransactions() {
@@ -293,103 +402,18 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
 
     }
 
-    private fun transferPayment(signedTxHex: String) {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    payMoneyResponse = ResponseState.Loading,
-                )
-            }
-
-            try {
-                val payRequest = BitPayRequest(
-                    jsonrpc = "2.0",
-                    method = "eth_sendRawTransaction",
-                    params = listOf("0x$signedTxHex"),
-                    id = "1"
-                )
-                val res = repository.payMoney(payRequest)
-                if (null != res.result) {
-                    delay(3000)
-
-                    val receiptRequest = BitPayRequest(
-                        jsonrpc = "2.0",
-                        method = "eth_getTransactionReceipt",
-                        params = listOf(res.result),
-                        id = "1"
-                    )
-                    val transactionReceipt = repository.getTransactionReceipt(receiptRequest)
-                    if (null != transactionReceipt.result) {
-                        if (transactionReceipt.result.status.equals("0x1", true)) {
-                            _uiState.update {
-                                it.copy(
-                                    payMoneyResponse = ResponseState.Success("Transaction Successful."),
-                                    amount = "",
-                                    toAddress = ""
-                                )
-                            }
-                        } else if (transactionReceipt.result.status.equals("0x0", true)) {
-                            _uiState.update {
-                                it.copy(
-                                    payMoneyResponse = ResponseState.Error(
-                                        "Transaction Failed."
-                                    )
-                                )
-                            }
-                        }
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                payMoneyResponse = ResponseState.Error(
-                                    transactionReceipt.error?.message
-                                        ?: "Transaction is not mined yet."
-                                )
-                            )
-                        }
-                    }
-                    delay(3000)
-                    getTransactions()
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            payMoneyResponse = ResponseState.Error(
-                                res.error?.message ?: "Unknown error"
-                            )
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        payMoneyResponse = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
-                        )
-                    )
-                }
-            }
-
-        }
-    }
-
 
     @OptIn(ExperimentalStdlibApi::class)
     private fun signedHexTransferPaymentTokens(
         nonce: String,
         walletPrivateKey: String,
-        crypto: String,
+        contractAddress: String,
         payload: ByteArray,
         gasLimit: String,
         gasPrice: String
     ): Ethereum.SigningOutput {
 
-        val contract = AnyAddress(
-            if (crypto.equals(
-                    "EZPT",
-                    true
-                )
-            ) WalletManager.EZPT_TOKEN_CONTRACT else WalletManager.USDT_TOKEN_CONTRACT,
-            CoinType.SMARTCHAIN
-        )
+        val contract = AnyAddress(contractAddress, CoinType.SMARTCHAIN)
 
         val input = Ethereum.SigningInput.newBuilder().apply {
             this.chainId = ByteString.copyFrom(BigInteger.valueOf(CHAIN_ID).toByteArray())
@@ -416,11 +440,11 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
         nonce: String,
         walletPrivateKey: String,
         gasPrice: String,
-        gasLimit: String
+        gasLimit: String,
+        to: String,
+        wei: BigInteger
     ): Ethereum.SigningOutput {
 
-        val wei =
-            (BigDecimal(_uiState.value.amount) * BigDecimal("1000000000000000000")).toBigInteger()
         val amountBytes = wei.toByteArray()
         val chainId = BigInteger.valueOf(CHAIN_ID).toByteArray()
         val input = Ethereum.SigningInput.newBuilder().apply {
@@ -429,7 +453,7 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
                 ByteString.copyFrom(BigInteger(nonce.removePrefix("0x"), 16).toByteArray())
             this.gasPrice = BigInteger(gasPrice.removePrefix("0x"), 16).toByteString()
             this.gasLimit = BigInteger(gasLimit.removePrefix("0x"), 16).toByteString()
-            this.toAddress = _uiState.value.toAddress.trim()
+            this.toAddress = to
             this.transaction = Ethereum.Transaction.newBuilder().apply {
                 this.transfer = Ethereum.Transaction.Transfer.newBuilder()
                     .setAmount(ByteString.copyFrom(amountBytes))
@@ -489,63 +513,53 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
         )
     }
 
-    private fun getBnbGasEstimateRequest(
-        from: String,
-        crypto: String,
-        payload: String = ""
-    ): EstimateGasRequest {
-        val hexValue = BigDecimal(_uiState.value.amount).multiply(BigDecimal("1000000000000000000"))
-            .toBigInteger()
-        val to = if (crypto.equals("BNB", true)) {
-            _uiState.value.toAddress.trim()
-        } else if (crypto.equals("EZPT", true)) {
-            WalletManager.EZPT_TOKEN_CONTRACT
-        } else {
-            WalletManager.USDT_TOKEN_CONTRACT
-        }
-        val params = listOf(
-            EstimateGasRequest.ParamObj(
-                from = from,
-                to = to,
-                value = if (crypto.equals("BNB", true)) "0x${hexValue.toString(16)}" else "0x0",
-                data = if (crypto.equals("BNB", true)) "" else "0x${payload}"
-            )
-        )
+    private fun estimateRequest(from: String, req: Request, payload: ByteArray?): EstimateGasRequest {
+        val native = req.kind is CoinKind.Native
+        val to = (req.kind as? CoinKind.Token)?.contract ?: req.to
         return EstimateGasRequest(
             jsonrpc = "2.0",
             method = "eth_estimateGas",
-            params = params,
+            params = listOf(
+                EstimateGasRequest.ParamObj(
+                    from = from,
+                    to = to,
+                    value = if (native) "0x${req.amountWei.toString(16)}" else "0x0",
+                    data = if (native || payload == null) "" else "0x${payload.toHexKey()}"
+                )
+            ),
             id = "1"
         )
     }
 
-    private fun validateForm(): Boolean {
-        _uiState.update {
-            _uiState.value.copy(amountError = null, toAddressError = null)
+    private fun ByteArray.toHexKey(): String = joinToString("") { "%02x".format(it) }
+
+    private fun validateForm(event: PayEvent.PayAmount): Boolean {
+        val state = _uiState.value
+        _uiState.update { it.copy(amountError = null, toAddressError = null) }
+
+        val addressError = if (state.toAddress.isBlank()) {
+            "Please enter the recipient address"
+        } else {
+            AddressValidator.validate(state.toAddress, ownAddress)
         }
-        if (_uiState.value.toAddress.isBlank()) {
-            _uiState.update {
-                _uiState.value.copy(toAddressError = "Please Enter Sender Address")
-            }
+        if (addressError != null) {
+            _uiState.update { it.copy(toAddressError = addressError) }
             return false
         }
 
-        if (_uiState.value.amount.isBlank()) {
-            _uiState.update {
-                _uiState.value.copy(amountError = "Please Enter Amount")
-            }
+        val amountError = AmountValidator.validateInput(state.amount)
+            ?: AmountValidator.validateFunds(
+                amount = AmountValidator.parse(state.amount)!!,
+                symbol = event.crypto,
+                tokenBalance = event.tokenBalance?.let { BigDecimal(it.toString()) },
+                bnbBalance = null,
+                feeBnb = null
+            )
+        if (amountError != null) {
+            _uiState.update { it.copy(amountError = amountError) }
             return false
         }
-
-        if (_uiState.value.amount.toDouble() <= 0) {
-            _uiState.update {
-                _uiState.value.copy(amountError = "Please Enter Valid Amount")
-            }
-            return false
-        }
-
         return true
     }
-
 
 }

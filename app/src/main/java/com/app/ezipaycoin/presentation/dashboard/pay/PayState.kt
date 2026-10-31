@@ -17,7 +17,18 @@ data class PayState(
     var responseState: ResponseState<BaseResponse<TransactionsResponse>> = ResponseState.Idle,
     var payMoneyResponse: ResponseState<String> = ResponseState.Idle,
     var isDialogVisible: Boolean = false,
-    var isScanning: Boolean = false
+    var isScanning: Boolean = false,
+    /** Set once fee and funds are checked; the user must confirm before anything is signed. */
+    var confirmation: PayConfirmation? = null,
+    /** Hash of a broadcast payment whose receipt has not arrived; blocks sending again. */
+    var pendingTxHash: String? = null
     //var transactionCountResponse: ResponseState<String> = ResponseState.Loading,
 
+)
+
+data class PayConfirmation(
+    val to: String,
+    val amount: String,
+    val symbol: String,
+    val feeBnb: String
 )
