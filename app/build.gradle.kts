@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -21,6 +23,16 @@ android {
             useSupportLibrary = true
         }
         manifestPlaceholders["facebook_app_id"] = "833416492706197"
+
+        // Production endpoints and contracts (BSC mainnet). Only the sandbox build
+        // type below overrides them; release always ships these.
+        buildConfigField("boolean", "SANDBOX", "false")
+        buildConfigField("String", "API_BASE_URL", "\"https://api.ezipaycoin.com/api/v1/\"")
+        buildConfigField("String", "RPC_URL", "\"https://bsc-dataseed.bnbchain.org\"")
+        buildConfigField("String", "IRIPASH_BASE_URL", "\"https://apiusdt.iripash.com/api/Payment/\"")
+        buildConfigField("long", "CHAIN_ID", "56L")
+        buildConfigField("String", "EZPT_TOKEN_CONTRACT", "\"0x50387a24253150e808875f3cac8111546623ba64\"")
+        buildConfigField("String", "USDT_TOKEN_CONTRACT", "\"0x55d398326f99059fF775485246999027B3197955\"")
     }
 
      signingConfigs {
@@ -41,6 +53,30 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
+
+        // Local sandbox: a debug build wired to the zero-cost sandbox in ezipay-coin-platform
+        // (local API, chain 31337, test tokens). It exists only while sandbox.properties does,
+        // so deleting that file detaches it; its values never reach a release build.
+        val sandboxFile = file("sandbox.properties")
+        if (sandboxFile.exists()) {
+            val sandbox = Properties().apply { sandboxFile.inputStream().use { load(it) } }
+            val host = project.findProperty("sandboxHost")?.toString() ?: sandbox.getProperty("host")
+            fun value(key: String): String =
+                requireNotNull(sandbox.getProperty(key)) { "sandbox.properties has no $key" }.replace("{host}", host)
+            val chainId = value("chain.id")
+            check(chainId != "56") { "sandbox.properties must not point at BSC mainnet" }
+            create("sandbox") {
+                initWith(getByName("debug"))
+                matchingFallbacks += "debug"
+                buildConfigField("boolean", "SANDBOX", "true")
+                buildConfigField("String", "API_BASE_URL", "\"${value("api.baseUrl")}\"")
+                buildConfigField("String", "RPC_URL", "\"${value("rpc.url")}\"")
+                buildConfigField("String", "IRIPASH_BASE_URL", "\"${value("iripash.baseUrl")}\"")
+                buildConfigField("long", "CHAIN_ID", "${chainId}L")
+                buildConfigField("String", "EZPT_TOKEN_CONTRACT", "\"${value("token.ezpt")}\"")
+                buildConfigField("String", "USDT_TOKEN_CONTRACT", "\"${value("token.usdt")}\"")
+            }
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -51,6 +87,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {

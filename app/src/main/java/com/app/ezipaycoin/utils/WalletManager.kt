@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.utils
 
+import com.app.ezipaycoin.BuildConfig
 import wallet.core.jni.Curve
 import wallet.core.jni.HDWallet
 import wallet.core.jni.Hash
@@ -73,12 +74,13 @@ object WalletManager {
     }
 
     //const val EZPT_TOKEN_CONTRACT: String = "0xCe135658a2E4db9F503B7922E2429c37d9d21DFc" //test net
-    const val EZPT_TOKEN_CONTRACT: String = "0x50387a24253150e808875f3cac8111546623ba64" // main net
+    // Mainnet for debug and release, the local chain for the sandbox build type.
+    const val EZPT_TOKEN_CONTRACT: String = BuildConfig.EZPT_TOKEN_CONTRACT
 
     //const val USDT_TOKEN_CONTRACT: String = "0x59691E19c4f159BdB1c1eDee5EB2616f8805F27B" //test net
-    const val USDT_TOKEN_CONTRACT: String = "0x55d398326f99059fF775485246999027B3197955" //main net
+    const val USDT_TOKEN_CONTRACT: String = BuildConfig.USDT_TOKEN_CONTRACT
 
     //const val CHAIN_ID = 97L //test net
-    const val CHAIN_ID = 56L //main net
+    const val CHAIN_ID = BuildConfig.CHAIN_ID
 
 }
