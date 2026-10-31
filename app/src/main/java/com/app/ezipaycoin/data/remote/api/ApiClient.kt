@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.data.remote.api
 
 import com.app.ezipaycoin.BuildConfig
+import com.app.ezipaycoin.config.ChainConfig
 import com.app.ezipaycoin.utils.SessionManager
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -50,11 +51,10 @@ object ApiClient {
             .build()
     }
 
-    //    https://bsc-dataseed.bnbchain.org // main net
-   //    https://bsc-testnet-dataseed.bnbchain.org test net
+    // JSON-RPC of the chain this process uses (ChainConfig).
     val retrofitPay: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(BuildConfig.RPC_URL)
+            .baseUrl(ChainConfig.current.rpcUrl)
             .client(client1)
             .addConverterFactory(GsonConverterFactory.create(EnvelopeAdapterFactory.gson))
             .build()

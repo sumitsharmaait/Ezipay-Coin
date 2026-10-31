@@ -7,11 +7,11 @@ import com.app.ezipaycoin.data.remote.dto.UserPreferences
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.domain.repository.AuthRepository
+import com.app.ezipaycoin.utils.FcmToken
 import com.app.ezipaycoin.utils.PasswordCredentials
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SessionManager
 import com.app.ezipaycoin.utils.WalletManager.signNonceWithTrustWalletCore
-import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,9 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import wallet.core.jni.PrivateKey
-import kotlin.coroutines.resume
 
 class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(UnlockState())
@@ -153,13 +151,8 @@ class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
         }
     }
 
-    /** Waits for the FCM token; login still proceeds without one. */
-    private suspend fun fetchFcmToken(): String = suspendCancellableCoroutine { cont ->
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            val token = if (task.isSuccessful) task.result.orEmpty() else ""
-            if (cont.isActive) cont.resume(token)
-        }
-    }
+    /** Waits for the FCM token; login still proceeds without one (also when Firebase is off). */
+    private suspend fun fetchFcmToken(): String = FcmToken.fetch()
 
     private fun verifyPassword() {
         viewModelScope.launch {

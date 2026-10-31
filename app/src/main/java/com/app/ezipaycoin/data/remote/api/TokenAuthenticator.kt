@@ -7,6 +7,7 @@ import com.app.ezipaycoin.utils.SessionRejection
 import com.app.ezipaycoin.utils.SessionRecovery
 import com.app.ezipaycoin.utils.WalletManager
 import com.app.ezipaycoin.utils.WalletSignIn
+import com.app.ezipaycoin.config.FirebaseAvailability
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -70,6 +71,7 @@ class TokenAuthenticator : Authenticator {
 
         private fun fcmToken(): String {
             var token = ""
+            if (!FirebaseAvailability.isAvailable) return token
             val latch = CountDownLatch(1)
             try {
                 FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->

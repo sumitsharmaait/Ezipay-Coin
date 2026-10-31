@@ -12,6 +12,7 @@ import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SessionManager
 import com.app.ezipaycoin.utils.WalletManager
 import com.app.ezipaycoin.utils.WalletManager.signNonceWithTrustWalletCore
+import com.app.ezipaycoin.config.FirebaseAvailability
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,9 +75,11 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
             }
             try {
                 var token = ""
-                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        token = task.result
+                if (FirebaseAvailability.isAvailable) {
+                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            token = task.result
+                        }
                     }
                 }
                 val privateKey = wallet.getKeyForCoin(CoinType.ETHEREUM)

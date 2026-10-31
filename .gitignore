@@ -18,6 +18,7 @@ settings.gradle.kts
 # Non-production Firebase configs
 app/src/debug/google-services.json
 app/src/sandbox/google-services.json
+app/src/staging/google-services.json
 # Signing material and per-developer config
 *.jks
 *.keystore

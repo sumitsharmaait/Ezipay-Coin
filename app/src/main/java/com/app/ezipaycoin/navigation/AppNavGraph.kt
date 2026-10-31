@@ -9,6 +9,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
+import com.app.ezipaycoin.config.ChainConfig
 import com.app.ezipaycoin.data.remote.api.ApiClient
 import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.remote.liveness.LivenessSocketClient
@@ -99,7 +100,7 @@ fun NavGraphBuilder.appNavGraph(
         composable<Screen.AppNavScreens.TransactionDetails> {
             walletSharedViewModel.uiState.collectAsState().value.selectedTransaction?.let {
                 TransactionDetailsScreen(item = it, onExplorerClick = { id ->
-                    walletSharedViewModel.onEvent(SharedEvent.OpenUrl("https://bscscan.com/tx/$id"))
+                    walletSharedViewModel.onEvent(SharedEvent.OpenUrl(ChainConfig.current.explorerTxUrl + id))
                 })
             }
         }
