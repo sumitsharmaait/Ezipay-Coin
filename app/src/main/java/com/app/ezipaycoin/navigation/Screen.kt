@@ -86,6 +86,9 @@ sealed class Screen(val route: String) {
         data object WalletDetails
 
         @Serializable
+        data object DeleteAccount
+
+        @Serializable
         data object KycStatus
 
         @Serializable

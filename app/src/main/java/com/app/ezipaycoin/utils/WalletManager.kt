@@ -23,6 +23,12 @@ object WalletManager {
     val address: String?
         get() = _wallet?.getAddressForCoin(CoinType.SMARTCHAIN)
 
+    /** Drops the in-memory wallet and anything held for a sign-up in progress. */
+    fun clear() {
+        _wallet = null
+        pendingProfilePic = null
+    }
+
     fun createNewWallet(): HDWallet {
         val wallet = HDWallet(128, "")
         _wallet = wallet

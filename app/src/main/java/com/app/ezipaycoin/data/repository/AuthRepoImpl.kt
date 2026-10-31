@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.data.repository
 
+import com.app.ezipaycoin.data.remote.dto.request.DeleteAccountRequest
 import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.data.remote.dto.request.UpdateProfileRequest
@@ -21,6 +22,10 @@ class AuthRepoImpl(private val apiService: ApiService) : AuthRepository {
 
     override suspend fun updateProfile(request: UpdateProfileRequest): BaseResponse<String> {
         return apiService.updateProfile(request)
+    }
+
+    override suspend fun deleteAccount(idempotencyKey: String): BaseResponse<String?> {
+        return apiService.deleteAccount(idempotencyKey, DeleteAccountRequest())
     }
 
     override suspend fun logout(): BaseResponse<String> {

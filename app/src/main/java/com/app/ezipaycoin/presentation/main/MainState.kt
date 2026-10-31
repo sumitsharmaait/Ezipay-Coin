@@ -27,6 +27,7 @@ data class MainState(
         "DepositViaCard",
         "Withdraw",
         "WalletDetails",
+        "DeleteAccount",
         "WebViewScreen"
     )
 )
