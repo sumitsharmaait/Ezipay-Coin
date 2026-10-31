@@ -9,14 +9,12 @@ import com.app.ezipaycoin.data.remote.dto.request.TransactionsRequest
 import com.app.ezipaycoin.domain.repository.TransactionsRepository
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.WalletManager
-import com.app.ezipaycoin.utils.WalletManager.CHAIN_ID
 import com.app.ezipaycoin.utils.validation.AddressValidator
 import com.app.ezipaycoin.utils.validation.CoinKind
 import com.app.ezipaycoin.utils.validation.ReceiptPolling
 import kotlinx.coroutines.CancellationException
 import com.app.ezipaycoin.utils.validation.AmountValidator
 import com.app.ezipaycoin.utils.validation.TxErrorMapper
-import com.google.protobuf.ByteString
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,14 +22,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import wallet.core.java.AnySigner
-import wallet.core.jni.AnyAddress
-import wallet.core.jni.CoinType
-import wallet.core.jni.proto.Ethereum
 import java.math.BigDecimal
 import java.math.BigInteger
 
-class PayViewModel(private val repository: TransactionsRepository) : ViewModel() {
+class PayViewModel(
+    private val repository: TransactionsRepository,
+    private val signer: TxSigner = WalletCoreTxSigner()
+) : ViewModel() {
     private val _uiState = MutableStateFlow(PayState())
     val uiState: StateFlow<PayState> = _uiState.asStateFlow()
 
@@ -272,16 +269,16 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
         // Nonce and fee are fetched again: they may have moved while the dialog was open.
         val quote = quote(req, from)
         val output = when (val kind = req.kind) {
-            is CoinKind.Token -> signedHexTransferPaymentTokens(
+            is CoinKind.Token -> signer.signToken(
                 quote.nonce, key, kind.contract,
                 encodeTransferPayload(req.to, req.amountWei), quote.gasLimit, quote.gasPrice
             )
-            else -> getBNBSignedHex(quote.nonce, key, quote.gasPrice, quote.gasLimit, req.to, req.amountWei)
+            else -> signer.signNative(quote.nonce, key, quote.gasPrice, quote.gasLimit, req.to, req.amountWei)
         }
         if (!output.errorMessage.isNullOrBlank()) {
             throw PayFailure(TxErrorMapper.GENERIC)
         }
-        transferPayment(output.encoded.toByteArray().toHexString())
+        transferPayment(output.encoded.toHexString())
     }
 
     private suspend fun transferPayment(signedTxHex: String) {
@@ -401,77 +398,6 @@ class PayViewModel(private val repository: TransactionsRepository) : ViewModel()
         }
 
     }
-
-
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun signedHexTransferPaymentTokens(
-        nonce: String,
-        walletPrivateKey: String,
-        contractAddress: String,
-        payload: ByteArray,
-        gasLimit: String,
-        gasPrice: String
-    ): Ethereum.SigningOutput {
-
-        val contract = AnyAddress(contractAddress, CoinType.SMARTCHAIN)
-
-        val input = Ethereum.SigningInput.newBuilder().apply {
-            this.chainId = ByteString.copyFrom(BigInteger.valueOf(CHAIN_ID).toByteArray())
-            this.nonce =
-                ByteString.copyFrom(BigInteger(nonce.removePrefix("0x"), 16).toByteArray())
-            this.gasPrice = BigInteger(gasPrice.removePrefix("0x"), 16).toByteString()
-            this.gasLimit = BigInteger(gasLimit.removePrefix("0x"), 16).toByteString()
-            this.toAddress = contract.description()
-            this.privateKey = ByteString.copyFrom(walletPrivateKey.hexToByteArray())
-            transaction = Ethereum.Transaction.newBuilder().apply {
-                contractGeneric = Ethereum.Transaction.ContractGeneric.newBuilder().apply {
-                    this.data = ByteString.copyFrom(payload)
-                    this.amount = ByteString.copyFrom(BigInteger.ZERO.toByteArray())
-                }.build()
-            }.build()
-        }.build()
-
-        val output = AnySigner.sign(input, CoinType.SMARTCHAIN, Ethereum.SigningOutput.parser())
-        return output
-    }
-
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun getBNBSignedHex(
-        nonce: String,
-        walletPrivateKey: String,
-        gasPrice: String,
-        gasLimit: String,
-        to: String,
-        wei: BigInteger
-    ): Ethereum.SigningOutput {
-
-        val amountBytes = wei.toByteArray()
-        val chainId = BigInteger.valueOf(CHAIN_ID).toByteArray()
-        val input = Ethereum.SigningInput.newBuilder().apply {
-            this.chainId = ByteString.copyFrom(chainId)
-            this.nonce =
-                ByteString.copyFrom(BigInteger(nonce.removePrefix("0x"), 16).toByteArray())
-            this.gasPrice = BigInteger(gasPrice.removePrefix("0x"), 16).toByteString()
-            this.gasLimit = BigInteger(gasLimit.removePrefix("0x"), 16).toByteString()
-            this.toAddress = to
-            this.transaction = Ethereum.Transaction.newBuilder().apply {
-                this.transfer = Ethereum.Transaction.Transfer.newBuilder()
-                    .setAmount(ByteString.copyFrom(amountBytes))
-                    .build()
-            }.build()
-            this.privateKey = ByteString.copyFrom(walletPrivateKey.hexToByteArray())
-
-        }.build()
-
-        val output = AnySigner.sign(input, CoinType.ETHEREUM, Ethereum.SigningOutput.parser())
-        return output
-    }
-
-
-    private fun BigInteger.toByteString(): ByteString {
-        return ByteString.copyFrom(this.toByteArray())
-    }
-
 
     private fun encodeTransferPayload(recipient: String, amount: BigInteger): ByteArray {
         // Step 1: Function selector

@@ -261,7 +261,7 @@ private fun DirectPayContent(
                 trailingIcon = {
                     Icon(
                         Icons.Filled.ContentPaste,
-                        contentDescription = "Search",
+                        contentDescription = "Paste address",
                         tint = Color.White.copy(alpha = 0.5f),
                         modifier = Modifier
                             .size(20.dp)

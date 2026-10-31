@@ -31,7 +31,7 @@ class KycRepoImpl(private val apiService: ApiService) : KycRepository {
             documentNumber = textPart(request.documentNumber),
             consentAccepted = textPart(request.consentAccepted.toString()),
             frontImage = filePart("frontImage", request.frontImagePath),
-            selfieImage = filePart("selfieImage", request.selfieImagePath),
+            selfie = filePart("Selfie", request.selfieImagePath),
             backImage = request.backImagePath?.let { filePart("backImage", it) },
             proofOfAddress = request.proofOfAddressPath?.let { filePart("proofOfAddress", it) }
         )
