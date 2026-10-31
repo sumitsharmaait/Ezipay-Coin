@@ -34,6 +34,6 @@ object TxErrorMapper {
         is SocketTimeoutException -> friendly("timeout")
         is UnknownHostException -> friendly("unable to resolve host")
         is IOException -> "No connection. Check your internet and try again"
-        else -> friendly(t.message)
+        else -> if (com.app.ezipaycoin.utils.UserMessages.isParseError(t)) com.app.ezipaycoin.utils.UserMessages.UNEXPECTED_RESPONSE else friendly(t.message)
     }
 }

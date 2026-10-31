@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.importfromseed
 
 import androidx.lifecycle.ViewModel
+import com.app.ezipaycoin.utils.UserMessages
 import com.app.ezipaycoin.utils.PasswordVerifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -143,7 +144,7 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
                 _uiState.update {
                     it.copy(
                         responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }

@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.createwith
 
 import android.util.Log
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
@@ -127,7 +128,7 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
                 _uiState.update {
                     it.copy(
                         responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }

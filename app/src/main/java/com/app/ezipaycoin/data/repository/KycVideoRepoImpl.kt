@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.data.repository
 
 import android.util.Log
+import com.app.ezipaycoin.utils.UserMessages
 import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.remote.dto.response.LivenessSessionResponse
 import com.app.ezipaycoin.data.remote.dto.response.VideoJobStatusResponse
@@ -47,7 +48,7 @@ class KycVideoRepoImpl(
             try {
                 ResponseState.Success(block())
             } catch (e: Exception) {
-                ResponseState.Error(e.message ?: "Something went wrong")
+                ResponseState.Error(UserMessages.of(e, "Something went wrong"))
             }
         }
 }
