@@ -134,11 +134,11 @@ interface ApiService {
         @Part("city") city: RequestBody,
         @Part("postalCode") postalCode: RequestBody,
         @Part("country") country: RequestBody,
-        @Part("documentType") documentType: RequestBody,
+        @Part("DocumentTypeId") documentType: RequestBody,
         @Part("documentNumber") documentNumber: RequestBody,
         @Part("consentAccepted") consentAccepted: RequestBody,
         @Part frontImage: MultipartBody.Part,
-        @Part selfieImage: MultipartBody.Part,
+        @Part selfie: MultipartBody.Part,
         @Part backImage: MultipartBody.Part?,
         @Part proofOfAddress: MultipartBody.Part?
     ): BaseResponse<KycStatusResponse>

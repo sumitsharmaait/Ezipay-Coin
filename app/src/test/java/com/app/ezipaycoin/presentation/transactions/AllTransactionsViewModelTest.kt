@@ -1,126 +1,133 @@
 package com.app.ezipaycoin.presentation.transactions
 
+import com.app.ezipaycoin.data.remote.dto.request.BitPayRequest
+import com.app.ezipaycoin.data.remote.dto.request.EstimateGasRequest
 import com.app.ezipaycoin.data.remote.dto.request.TransactionsRequest
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
+import com.app.ezipaycoin.data.remote.dto.response.BnbChainResponse
+import com.app.ezipaycoin.data.remote.dto.response.TransactionReceiptResponse
 import com.app.ezipaycoin.data.remote.dto.response.TransactionsResponse
 import com.app.ezipaycoin.domain.repository.TransactionsRepository
-import com.app.ezipaycoin.testutil.Fixtures
-import com.app.ezipaycoin.testutil.MainDispatcherRule
 import com.app.ezipaycoin.utils.ResponseState
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Rule
+import org.junit.Before
 import org.junit.Test
-import java.io.IOException
 
-/**
- * Transaction history list. Two tests pin behaviour that looks wrong (page never advances, loader
- * sticks after an error); they are named *KnownIssue* and recorded in the findings, so a fix shows
- * up as a deliberate test change.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AllTransactionsViewModelTest {
-    @get:Rule
-    val main = MainDispatcherRule()
 
-    private val repo = mockk<TransactionsRepository>()
-    private val requests = mutableListOf<TransactionsRequest>()
-
-    private fun page(total: Int, vararg ids: String) = BaseResponse(
-        true, "OK", "",
-        TransactionsResponse(ids.map { Fixtures.txItem(it) }, 1, 10, total)
+    private fun item(id: String, type: String = "send") = TransactionsResponse.TransactionsItem(
+        id = id, chain = "BSC", type = type, symbol = "EZP", amount = 1.0, fiatValue = "1",
+        timestamp = "2026-10-31T10:00:00Z", status = "ok", to = "0xto", from = "0xfrom",
+        nonce = null, gas = "0", gasPrice = "0", gasUsed = "0", cumulativeGasUsed = "0"
     )
 
-    private fun vm(): AllTransactionsViewModel {
-        coEvery { repo.getTransactions(any()) } answers {
-            val r = firstArg<TransactionsRequest>(); requests += r; page(2, "a", "b")
+    private fun ok(items: List<TransactionsResponse.TransactionsItem>, total: Int) =
+        BaseResponse(true, "ok", "", TransactionsResponse(items, 1, 10, total))
+
+    private class FakeRepo : TransactionsRepository {
+        val requests = mutableListOf<TransactionsRequest>()
+        val script = ArrayDeque<() -> BaseResponse<TransactionsResponse>>()
+        override suspend fun getTransactions(request: TransactionsRequest): BaseResponse<TransactionsResponse> {
+            requests += request
+            return script.removeFirst().invoke()
         }
-        return AllTransactionsViewModel(repo).also { main.scheduler.runCurrent() }
+        override suspend fun payMoney(request: BitPayRequest): BnbChainResponse = error("unused")
+        override suspend fun getTransactionReceipt(request: BitPayRequest): TransactionReceiptResponse = error("unused")
+        override suspend fun getTransactionCount(request: BitPayRequest): BnbChainResponse = error("unused")
+        override suspend fun getEstimateGas(request: EstimateGasRequest): BnbChainResponse = error("unused")
     }
 
-    @Test
-    fun firstPageLoadsOnCreation() {
-        val vm = vm()
-        val s = vm.uiState.value
-        assertEquals(listOf("a", "b"), s.transactionsList.map { it.id })
-        assertFalse(s.isLoading)
-        assertTrue(s.responseState is ResponseState.Success)
-        assertEquals(TransactionsRequest(chain = "BSC", type = "all", page = 1, size = 10), requests.single())
-    }
+    @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
+    @After fun tearDown() = Dispatchers.resetMain()
+
+    private fun page(prefix: String, n: Int = 10) = (1..n).map { item("$prefix$it") }
 
     @Test
-    fun everythingLoadedStopsPagination() {
-        val vm = vm()
-        assertFalse(vm.uiState.value.canLoadMore) // 2 items of total 2
-        vm.loadMoreTransactions()
-        main.scheduler.runCurrent()
-        assertEquals(1, requests.size)
-    }
-
-    @Test
-    fun changingTheFilterResetsTheListAndRequestsThatType() {
-        val vm = vm()
-        vm.onEvent(TransactionsEvent.FilterChanged("Received"))
-        main.scheduler.runCurrent()
-        assertEquals("received", requests.last().type)
-        assertEquals(2, vm.uiState.value.transactionsList.size)
-        assertEquals("Received", vm.uiState.value.selectedFilter)
-    }
-
-    @Test
-    fun emptyResultShowsNoTransactionsMessage() {
-        coEvery { repo.getTransactions(any()) } returns BaseResponse(
-            true, "OK", "", TransactionsResponse(emptyList(), 1, 10, 0)
-        )
+    fun pagesAdvanceFromOneAndStopWhenTheTotalIsReached() {
+        val repo = FakeRepo()
+        repo.script += { ok(page("a"), 15) }
+        repo.script += { ok(page("b", 5), 15) }
         val vm = AllTransactionsViewModel(repo)
-        main.scheduler.runCurrent()
-        assertEquals(ResponseState.Error("No Transactions Found!!"), vm.uiState.value.responseState)
+        assertEquals(1, repo.requests[0].page)
+        assertEquals(10, vm.uiState.value.transactionsList.size)
+        assertTrue(vm.uiState.value.canLoadMore)
+
+        vm.loadMoreTransactions()
+        assertEquals(2, repo.requests[1].page)
+        assertEquals(15, vm.uiState.value.transactionsList.size)
+        assertFalse(vm.uiState.value.canLoadMore)
         assertFalse(vm.uiState.value.isLoading)
+
+        vm.loadMoreTransactions()
+        assertEquals(2, repo.requests.size)
     }
 
     @Test
-    fun pageNumberKnownIssueNeverAdvancesBetweenLoads() {
-        coEvery { repo.getTransactions(any()) } answers {
-            requests += firstArg<TransactionsRequest>()
-            page(5, "x${requests.size}", "y${requests.size}")
-        }
+    fun aShortFirstPageEndsPaging() {
+        val repo = FakeRepo()
+        repo.script += { ok(page("a", 3), 0) }
         val vm = AllTransactionsViewModel(repo)
-        main.scheduler.runCurrent()
-        vm.loadMoreTransactions()
-        main.scheduler.runCurrent()
-        vm.loadMoreTransactions()
-        main.scheduler.runCurrent()
-        // Expected after a fix: pages 1, 2, 3. Today the same page is requested each time.
-        assertEquals(listOf(1, 1, 1), requests.map { it.page })
+        assertFalse(vm.uiState.value.canLoadMore)
     }
 
     @Test
-    fun loaderKnownIssueStaysOnAfterAServerRefusal() {
-        coEvery { repo.getTransactions(any()) } returns BaseResponse(
-            false, "Transactions", "err", TransactionsResponse(emptyList(), 1, 10, 0)
-        )
+    fun serverRefusalResetsLoadingAndRetryAsksForTheSamePage() {
+        val repo = FakeRepo()
+        repo.script += { BaseResponse(false, "boom", "", TransactionsResponse(emptyList(), 0, 0, 0)) }
+        repo.script += { ok(page("a"), 20) }
         val vm = AllTransactionsViewModel(repo)
-        main.scheduler.runCurrent()
+        assertFalse(vm.uiState.value.isLoading)
+        assertEquals("boom", (vm.uiState.value.responseState as ResponseState.Error).message)
+
+        vm.retry()
+        assertEquals(listOf(1, 1), repo.requests.map { it.page })
+        assertEquals(10, vm.uiState.value.transactionsList.size)
+        assertTrue(vm.uiState.value.responseState is ResponseState.Success<*>)
+    }
+
+    @Test
+    fun exceptionResetsLoadingAndKeepsEarlierRows() {
+        val repo = FakeRepo()
+        repo.script += { ok(page("a"), 30) }
+        repo.script += { throw java.io.IOException("offline") }
+        repo.script += { ok(page("b"), 30) }
+        val vm = AllTransactionsViewModel(repo)
+        vm.loadMoreTransactions()
+        assertFalse(vm.uiState.value.isLoading)
+        assertEquals(10, vm.uiState.value.transactionsList.size)
         assertTrue(vm.uiState.value.responseState is ResponseState.Error)
-        // Expected after a fix: false. Today isLoading stays true, which blocks every retry.
-        assertTrue(vm.uiState.value.isLoading)
-        vm.loadMoreTransactions()
-        main.scheduler.runCurrent()
-        coVerify(exactly = 1) { repo.getTransactions(any()) }
+
+        vm.retry()
+        assertEquals(listOf(1, 2, 2), repo.requests.map { it.page })
+        assertEquals(20, vm.uiState.value.transactionsList.size)
     }
 
     @Test
-    fun loaderKnownIssueStaysOnAfterANetworkError() {
-        coEvery { repo.getTransactions(any()) } throws IOException("offline")
+    fun filterChangeRestartsAtPageOne() {
+        val repo = FakeRepo()
+        repo.script += { ok(page("a"), 30) }
+        repo.script += { ok(page("b"), 30) }
+        repo.script += { ok(page("c", 2), 2) }
         val vm = AllTransactionsViewModel(repo)
-        main.scheduler.runCurrent()
-        assertEquals(ResponseState.Error("offline"), vm.uiState.value.responseState)
-        assertTrue(vm.uiState.value.isLoading)
+        vm.loadMoreTransactions()
+        vm.onEvent(TransactionsEvent.FilterChanged("Received"))
+        assertEquals(1, repo.requests[2].page)
+        assertEquals("received", repo.requests[2].type)
+        assertEquals(2, vm.uiState.value.transactionsList.size)
+    }
+
+    @Test
+    fun counterpartyIsTheOtherSide() {
+        assertEquals("0xto", item("1", "send").counterparty())
+        assertEquals("0xfrom", item("2", "received").counterparty())
     }
 }
