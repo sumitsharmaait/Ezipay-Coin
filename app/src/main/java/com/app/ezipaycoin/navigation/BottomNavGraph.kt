@@ -7,7 +7,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.repository.HomeRepoImpl
+import com.app.ezipaycoin.BuildConfig
+import com.app.ezipaycoin.data.repository.EarnRepoImpl
 import com.app.ezipaycoin.presentation.dashboard.earn.EarnScreen
+import com.app.ezipaycoin.presentation.dashboard.earn.EarnViewModel
 import com.app.ezipaycoin.presentation.dashboard.home.HomeScreen
 import com.app.ezipaycoin.presentation.dashboard.home.HomeViewModel
 import com.app.ezipaycoin.presentation.dashboard.learn.LearnScreen
@@ -70,7 +73,12 @@ fun NavGraphBuilder.bottomNavGraph(
         }
 
         composable<Screen.BottomNavScreens.Earn> {
-            EarnScreen()
+            val earnViewModel: EarnViewModel = viewModel(
+                factory = ViewModelFactory {
+                    EarnViewModel(EarnRepoImpl(apiService, BuildConfig.CHAIN_ID.toInt()))
+                }
+            )
+            EarnScreen(earnViewModel)
         }
 
 

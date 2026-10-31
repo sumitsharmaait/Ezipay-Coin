@@ -1,277 +1,79 @@
 package com.app.ezipaycoin.presentation.dashboard.earn.staking
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.app.ezipaycoin.R
-import com.app.ezipaycoin.ui.composables.GoldGradientButton
+import com.app.ezipaycoin.data.remote.dto.response.StakingPoolResponse
+import com.app.ezipaycoin.presentation.dashboard.earn.EarnEmpty
+import com.app.ezipaycoin.presentation.dashboard.earn.EarnError
+import com.app.ezipaycoin.presentation.dashboard.earn.EarnLoading
+import com.app.ezipaycoin.presentation.dashboard.earn.Load
+import com.app.ezipaycoin.ui.theme.GoldAccentColor
+import com.app.ezipaycoin.ui.theme.TextHintColor
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
-import com.app.ezipaycoin.ui.theme.cardBorderColor
-import com.app.ezipaycoin.ui.theme.cardGreyTextColor
 import com.app.ezipaycoin.ui.theme.greyButtonBackground
-import com.app.ezipaycoin.ui.theme.grey_23
+import java.util.Locale
 
+/** Read-only list of the pools the server offers. Staking itself is not available in the app yet. */
 @Composable
-fun Staking() {
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 8.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.Start
-    ) {
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            "Active Staking Pools",
-            style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-        val pools = listOf(
-            StakingPool(R.drawable.ic_ezipay_coin_small, "Ezipay Staking", "12.5%", "30 Days"),
-            StakingPool(R.drawable.ic_usdt_icon, "USDT Staking", "12.5%", "60 Days"),
-            StakingPool(R.drawable.ic_ezipay_coin_small, "Ezipay Staking", "12.5%", "30 Days"),
-            StakingPool(R.drawable.ic_usdt_icon, "USDT Staking", "12.5%", "60 Days")
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            pools.forEach { pool ->
-                StakingPoolCard(pool = pool)
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            "Your Stakes",
-            style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        val staks = listOf(
-            YourStakes("0 EZP", "0 EZP", "31/10/2025"),
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            staks.forEach { stake ->
-                YourStakesCard(stake = stake)
-            }
-        }
-    }
-
-}
-
-@Composable
-private fun StakingPoolCard(pool: StakingPool) {
-    OutlinedCard(
-        border = BorderStroke(width = 1.dp, color = cardBorderColor),
-        colors = CardDefaults.cardColors(containerColor = grey_23),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(painterResource(pool.iconRes), pool.name, Modifier.size(24.dp))
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(
-                modifier = Modifier
-                    .weight(2.5f)
-            ) {
+fun Staking(pools: Load<List<StakingPoolResponse>>, onRetry: () -> Unit) {
+    when (pools) {
+        Load.Loading -> EarnLoading()
+        is Load.Failed -> EarnError(pools.message, onRetry)
+        is Load.Ready ->
+            if (pools.data.isEmpty()) EarnEmpty("No staking pools are open right now.")
+            else Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Staking pools", style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor))
                 Text(
-                    pool.name,
-                    style = MaterialTheme.typography.bodyLarge.copy(color = TextPrimaryColor)
+                    "View only. Staking from the app is coming later.",
+                    style = MaterialTheme.typography.bodySmall.copy(color = TextHintColor)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(
-                            style = SpanStyle(
-                                color = cardGreyTextColor,
-                                fontWeight = FontWeight(400)
-                            )
-                        ) {
-                            append("JUL: ")
-                        }
-                        withStyle(
-                            style = SpanStyle(
-                                color = TextPrimaryColor,
-                                fontWeight = FontWeight(400)
-                            )
-                        ) {
-                            append("12.5%")
-                        }
-                    },
-                    style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(
-                            style = SpanStyle(
-                                color = cardGreyTextColor,
-                                fontWeight = FontWeight(400)
-                            )
-                        ) {
-                            append("Lock: ")
-                        }
-                        withStyle(
-                            style = SpanStyle(
-                                color = TextPrimaryColor,
-                                fontWeight = FontWeight(400)
-                            )
-                        ) {
-                            append("60 days")
-                        }
-                    },
-                    style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor)
-                )
+                pools.data.forEach { PoolCard(it) }
             }
-            GoldGradientButton(
-                label = "Stake",
-                onClick = { /*TODO*/ },
-                modifier = Modifier.weight(1.5f)
-            )
-
-        }
-
     }
 }
 
 @Composable
-private fun YourStakesCard(stake: YourStakes) {
+private fun PoolCard(pool: StakingPoolResponse) {
     OutlinedCard(
-        border = BorderStroke(width = 1.dp, color = cardBorderColor),
-        colors = CardDefaults.cardColors(containerColor = grey_23),
-        modifier = Modifier
-            .fillMaxWidth()
+        border = BorderStroke(1.dp, greyButtonBackground),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(8.dp)
-        ) {
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row {
                 Text(
-                    "Staked: ${stake.staked}",
-                    style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor)
+                    pool.name ?: "Pool ${pool.poolId}",
+                    style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor),
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.weight(1f))
-                Button(
-                    onClick = { /* TODO */ },
-                    modifier = Modifier.height(16.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = greyButtonBackground)
-                ) {
+                pool.apr?.let {
                     Text(
-                        "Claim",
-                        style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor)
+                        String.format(Locale.US, "%.2f%% APR", it),
+                        style = MaterialTheme.typography.titleMedium.copy(color = GoldAccentColor)
                     )
                 }
-
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Earned: ${stake.earned}",
-                    style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor)
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Button(
-                    onClick = { /* TODO */ },
-                    modifier = Modifier.height(16.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = greyButtonBackground)
-                ) {
-                    Text(
-                        "Claim",
-                        style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor)
-                    )
-                }
-
+            val details = listOfNotNull(
+                pool.token?.symbol?.let { "Token: $it" },
+                pool.lockDays?.let { "Lock: $it days" },
+                pool.minStake?.let { "Minimum: $it" },
+                if (pool.isActive) null else "Closed"
+            ).joinToString("  |  ")
+            if (details.isNotEmpty()) {
+                Text(details, style = MaterialTheme.typography.bodySmall.copy(color = TextHintColor))
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(
-                        style = SpanStyle(
-                            color = cardGreyTextColor,
-                            fontWeight = FontWeight(400)
-                        )
-                    ) {
-                        append("Locked Until: ")
-                    }
-                    withStyle(
-                        style = SpanStyle(
-                            color = TextPrimaryColor,
-                            fontWeight = FontWeight(400)
-                        )
-                    ) {
-                        append(stake.lockedUntil)
-                    }
-                },
-                style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor)
-            )
         }
     }
 }
-
-
-data class StakingPool(
-    @DrawableRes val iconRes: Int,
-    val name: String,
-    val apr: String,
-    val lockPeriod: String
-)
-
-data class YourStakes(
-    val staked: String,
-    val earned: String,
-    val lockedUntil: String
-)
-
-//@Preview
-//@Composable
-//fun StakingPreview() {
-//    EzipayCoinTheme {
-//        Staking()
-//    }
-//}
