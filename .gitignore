@@ -14,3 +14,7 @@
 .cxx
 local.properties
 settings.gradle.kts
+
+# Non-production Firebase configs
+app/src/debug/google-services.json
+app/src/sandbox/google-services.json

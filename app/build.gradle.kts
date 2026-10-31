@@ -70,12 +70,16 @@ android {
             // A separate applicationId lets debug and release coexist on one device. It needs a
             // matching Firebase app, so it applies only once google-services.json knows the id.
             val debugId = "com.app.ezipaycoin.debug"
-            val gsFile = file("google-services.json")
-            if (gsFile.exists() && gsFile.readText().contains(debugId)) {
+            // The plugin prefers src/debug/google-services.json (separate non-production Firebase
+            // project) over app/google-services.json.
+            val knowsDebugId = listOf("src/debug/google-services.json", "google-services.json")
+                .map { file(it) }
+                .any { it.exists() && it.readText().contains(debugId) }
+            if (knowsDebugId) {
                 applicationIdSuffix = ".debug"
                 versionNameSuffix = "-debug"
             } else {
-                logger.warn("google-services.json has no client for $debugId; debug keeps the release applicationId. Register the app in Firebase to enable the .debug suffix.")
+                logger.warn("no google-services.json has a client for $debugId; debug keeps the release applicationId. Register the app in Firebase to enable the .debug suffix.")
             }
         }
 
