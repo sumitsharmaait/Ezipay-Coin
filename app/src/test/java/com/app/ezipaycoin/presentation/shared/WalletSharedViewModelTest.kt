@@ -32,8 +32,7 @@ import java.io.IOException
  * Dashboard refresh rules: load at unlock, throttled refresh on resume and push, pull-to-refresh
  * always fetches, and a failed background refresh keeps the last good data on screen.
  *
- * The throttles read the real clock (there is no clock parameter yet), so these tests only rely on
- * "second call within a few milliseconds is throttled", never on a window elapsing.
+ * The throttles take their time from [now], which the tests move by hand.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletSharedViewModelTest {
@@ -59,7 +58,9 @@ class WalletSharedViewModelTest {
         unmockkAll()
     }
 
-    private fun vm() = WalletSharedViewModel(home, data).also { main.scheduler.runCurrent() }
+    private var now = 1_000_000L
+
+    private fun vm() = WalletSharedViewModel(home, data) { now }.also { main.scheduler.runCurrent() }
 
     private fun WalletSharedViewModel.unlock() {
         onEvent(SharedEvent.AppUnlocked)
@@ -162,6 +163,41 @@ class WalletSharedViewModelTest {
         vm.send(SharedEvent.RefreshIfStale) // immediately again: throttled
         vm.send(SharedEvent.RefreshIfStale)
         coVerify(exactly = 2) { home.getDashboard() }
+    }
+
+    @Test
+    fun resumeRefreshIsAllowedAgainOnceTheWindowHasPassed() {
+        val vm = vm()
+        vm.unlock()
+        vm.send(SharedEvent.RefreshIfStale)
+        coVerify(exactly = 2) { home.getDashboard() }
+
+        now += 9_999
+        vm.send(SharedEvent.RefreshIfStale)
+        coVerify(exactly = 2) { home.getDashboard() }
+
+        now += 1
+        vm.send(SharedEvent.RefreshIfStale)
+        coVerify(exactly = 3) { home.getDashboard() }
+    }
+
+    @Test
+    fun pushRefreshIsAllowedAgainAfterTwoSeconds() {
+        val vm = vm()
+        vm.unlock()
+        SessionManager.notifyTransferActivity()
+        main.scheduler.runCurrent()
+        coVerify(exactly = 2) { home.getDashboard() }
+
+        now += 1_999
+        SessionManager.notifyTransferActivity()
+        main.scheduler.runCurrent()
+        coVerify(exactly = 2) { home.getDashboard() }
+
+        now += 1
+        SessionManager.notifyTransferActivity()
+        main.scheduler.runCurrent()
+        coVerify(exactly = 3) { home.getDashboard() }
     }
 
     @Test

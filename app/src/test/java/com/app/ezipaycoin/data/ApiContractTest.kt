@@ -139,12 +139,8 @@ class ApiContractTest {
         assertEquals(dtoFields("MintAllowlistRequestDTO"), fieldsOf(MintAllowlistRequest::class.java))
     }
 
-    /**
-     * Form fields KycRepoImpl sends that the backend form (KycSubmitRequestDTO) has no property for,
-     * so model binding drops them. Both are [Required] on the backend, so submit is rejected.
-     * Remove an entry when the app sends the backend's name (DocumentTypeId, Selfie).
-     */
-    private val KNOWN_KYC_FORM_MISMATCHES = setOf("documenttype", "selfieimage")
+    /** Form fields KycRepoImpl may send that the backend form does not bind. Empty since the names were aligned. */
+    private val KNOWN_KYC_FORM_MISMATCHES = emptySet<String>()
 
     @Test
     fun kycSubmitFormFieldNamesMatchTheBackendForm() {

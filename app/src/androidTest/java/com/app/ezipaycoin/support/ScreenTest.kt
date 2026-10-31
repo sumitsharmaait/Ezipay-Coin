@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.support
 
 import android.os.Build
+import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.rule.GrantPermissionRule
@@ -51,7 +52,11 @@ abstract class ScreenTest {
 
     /** Shows [content] inside the app theme in place of the activity's own content. */
     protected fun show(content: @Composable () -> Unit) {
-        composeRule.setContent { EzipayCoinTheme { content() } }
+        // MainActivity has already set its own content, which the rule's setContent refuses to replace,
+        // so set it on the activity directly. The rule still tracks the new composition.
+        composeRule.runOnUiThread {
+            composeRule.activity.setContent { EzipayCoinTheme { content() } }
+        }
     }
 
     /** Runs [block] on the main thread and returns its result (view models must be built there). */

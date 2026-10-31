@@ -131,5 +131,6 @@ class SendScreenTest : ScreenTest() {
         open()
         composeRule.onNodeWithContentDescription("Select Token").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Slide").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Paste address").assertIsDisplayed()
     }
 }

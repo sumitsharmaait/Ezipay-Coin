@@ -9,6 +9,8 @@ import com.app.ezipaycoin.data.remote.dto.response.TransactionReceiptResponse
 import com.app.ezipaycoin.domain.repository.TransactionsRepository
 import com.app.ezipaycoin.presentation.dashboard.pay.PayEvent
 import com.app.ezipaycoin.presentation.dashboard.pay.PayViewModel
+import com.app.ezipaycoin.presentation.dashboard.pay.SignedTx
+import com.app.ezipaycoin.presentation.dashboard.pay.TxSigner
 import com.app.ezipaycoin.testutil.FakeDataStore
 import com.app.ezipaycoin.testutil.Fixtures
 import com.app.ezipaycoin.testutil.MainDispatcherRule
@@ -17,13 +19,9 @@ import com.app.ezipaycoin.utils.WalletManager
 import com.app.ezipaycoin.utils.validation.AddressValidator
 import com.app.ezipaycoin.utils.validation.AmountValidator
 import com.app.ezipaycoin.utils.validation.TxErrorMapper
-import com.google.protobuf.ByteString
-import com.google.protobuf.MessageLite
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -36,9 +34,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import wallet.core.java.AnySigner
-import wallet.core.jni.CoinType
-import wallet.core.jni.proto.Ethereum
 import java.io.IOException
 import java.math.BigInteger
 
@@ -53,7 +48,12 @@ class PayViewModelTest {
     val main = MainDispatcherRule()
 
     private val repo = mockk<TransactionsRepository>()
-    private val signedInputs = mutableListOf<Ethereum.SigningInput>()
+    private class NativeCall(val nonce: String, val key: String, val gasPrice: String, val gasLimit: String, val to: String, val wei: BigInteger)
+    private class TokenCall(val nonce: String, val key: String, val contract: String, val payload: ByteArray, val gasLimit: String, val gasPrice: String)
+
+    private val nativeCalls = mutableListOf<NativeCall>()
+    private val tokenCalls = mutableListOf<TokenCall>()
+    private val signedCount get() = nativeCalls.size + tokenCalls.size
     private var signerError: String = ""
     private val rawTx = byteArrayOf(0x02, 0x7f, 0x0a)
 
@@ -70,14 +70,6 @@ class PayViewModelTest {
         FakeDataStore.install(
             FakeDataStore(UserPreferences(walletAddress = Fixtures.OWN_ADDRESS, walletPrivateKey = Fixtures.PRIVATE_KEY))
         )
-        mockkStatic(AnySigner::class)
-        every { AnySigner.sign(any<MessageLite>(), any<CoinType>(), any<com.google.protobuf.Parser<Ethereum.SigningOutput>>()) } answers {
-            signedInputs += firstArg<MessageLite>() as Ethereum.SigningInput
-            Ethereum.SigningOutput.newBuilder()
-                .setEncoded(ByteString.copyFrom(rawTx))
-                .setErrorMessage(signerError)
-                .build()
-        }
         coEvery { repo.getTransactions(any<TransactionsRequest>()) } returns Fixtures.txPage(Fixtures.txItem())
         coEvery { repo.getTransactionCount(any()) } answers {
             val req = firstArg<BitPayRequest>()
@@ -107,7 +99,19 @@ class PayViewModelTest {
     private fun receipt(status: String?) =
         TransactionReceiptResponse("2.0", "1", status?.let { TransactionReceiptResponse.ReceiptResult(it) }, null)
 
-    private fun vm(): PayViewModel = PayViewModel(repo).also { main.scheduler.runCurrent() }
+    private val signer = object : TxSigner {
+        override fun signToken(nonce: String, walletPrivateKey: String, contractAddress: String, payload: ByteArray, gasLimit: String, gasPrice: String): SignedTx {
+            tokenCalls += TokenCall(nonce, walletPrivateKey, contractAddress, payload, gasLimit, gasPrice)
+            return SignedTx(rawTx, signerError.ifEmpty { null })
+        }
+
+        override fun signNative(nonce: String, walletPrivateKey: String, gasPrice: String, gasLimit: String, to: String, wei: BigInteger): SignedTx {
+            nativeCalls += NativeCall(nonce, walletPrivateKey, gasPrice, gasLimit, to, wei)
+            return SignedTx(rawTx, signerError.ifEmpty { null })
+        }
+    }
+
+    private fun vm(): PayViewModel = PayViewModel(repo, signer).also { main.scheduler.runCurrent() }
 
     private fun PayViewModel.fill(to: String = Fixtures.RECIPIENT, amount: String = "1.5") {
         onEvent(PayEvent.ToAddressChanged(to))
@@ -265,7 +269,7 @@ class PayViewModelTest {
         assertEquals("BNB", c.symbol)
         assertEquals("0.000105", c.feeBnb) // 21000 gas * 5 gwei
         assertEquals(ResponseState.Idle, vm.uiState.value.payMoneyResponse)
-        assertTrue("nothing may be signed or broadcast before the user confirms", signedInputs.isEmpty())
+        assertTrue("nothing may be signed or broadcast before the user confirms", (signedCount == 0))
         coVerify(exactly = 0) { repo.payMoney(any()) }
     }
 
@@ -383,25 +387,46 @@ class PayViewModelTest {
     // ---- confirm -> sign -> broadcast ----
 
     @Test
-    fun confirmSignsOnTheConfiguredChainAndBroadcastsTheSignedBytes() {
+    fun confirmSignsWithTheQuotedNonceAndFeeAndBroadcastsTheSignedBytes() {
         val vm = vm()
         vm.fill(amount = "1.5")
         vm.sendBnb()
         vm.onEvent(PayEvent.ConfirmPayment)
         main.scheduler.advanceUntilIdle()
 
-        val input = signedInputs.single()
-        assertEquals(BigInteger.valueOf(WalletManager.CHAIN_ID), BigInteger(1, input.chainId.toByteArray()))
-        assertEquals(97L, WalletManager.CHAIN_ID) // debug builds never sign for mainnet
-        assertEquals(BigInteger.valueOf(7), BigInteger(1, input.nonce.toByteArray()))
-        assertEquals(BigInteger("5000000000"), BigInteger(1, input.gasPrice.toByteArray()))
-        assertEquals(BigInteger.valueOf(21000), BigInteger(1, input.gasLimit.toByteArray()))
-        assertEquals(Fixtures.RECIPIENT, input.toAddress)
-        assertEquals(BigInteger("1500000000000000000"), BigInteger(1, input.transaction.transfer.amount.toByteArray()))
+        val call = nativeCalls.single()
+        assertEquals("0x7", call.nonce)
+        assertEquals(gasPriceHex, call.gasPrice)
+        assertEquals(gasLimitHex, call.gasLimit)
+        assertEquals(Fixtures.PRIVATE_KEY, call.key)
+        assertEquals(Fixtures.RECIPIENT, call.to)
+        assertEquals(BigInteger("1500000000000000000"), call.wei)
 
         coVerify(exactly = 1) {
             repo.payMoney(match { it.method == "eth_sendRawTransaction" && it.params == listOf("0x027f0a") })
         }
+    }
+
+    @Test
+    fun tokenConfirmSignsAContractCallToTheTokenWithTransferCalldata() {
+        val vm = vm()
+        vm.fill(amount = "1.5")
+        vm.sendEzpt()
+        vm.onEvent(PayEvent.ConfirmPayment)
+        main.scheduler.advanceUntilIdle()
+
+        val call = tokenCalls.single()
+        assertTrue(nativeCalls.isEmpty())
+        assertEquals(WalletManager.EZPT_TOKEN_CONTRACT, call.contract)
+        assertEquals("0x7", call.nonce)
+        assertEquals(
+            "a9059cbb" +
+                "000000000000000000000000fb6916095ca1df60bb79ce92ce3ea74c37c5d359" +
+                "00000000000000000000000000000000000000000000000014d1120d7b160000",
+            call.payload.joinToString("") { "%02x".format(it) }
+        )
+        coVerify(exactly = 1) { repo.payMoney(any()) }
+        assertEquals(ResponseState.Success("Transaction Successful."), vm.uiState.value.payMoneyResponse)
     }
 
     @Test
@@ -480,7 +505,7 @@ class PayViewModelTest {
         assertNull(vm.uiState.value.confirmation)
         vm.onEvent(PayEvent.ConfirmPayment)
         main.scheduler.advanceUntilIdle()
-        assertTrue(signedInputs.isEmpty())
+        assertTrue((signedCount == 0))
         coVerify(exactly = 0) { repo.payMoney(any()) }
     }
 
@@ -513,7 +538,7 @@ class PayViewModelTest {
         vm.onEvent(PayEvent.ConfirmPayment)
         main.scheduler.advanceUntilIdle()
         coVerify(exactly = 1) { repo.payMoney(any()) }
-        assertEquals(1, signedInputs.size)
+        assertEquals(1, signedCount)
     }
 
     // ---- slow confirmation ----

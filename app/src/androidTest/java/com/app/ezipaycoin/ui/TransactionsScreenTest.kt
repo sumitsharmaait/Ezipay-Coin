@@ -1,6 +1,8 @@
 package com.app.ezipaycoin.ui
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
@@ -31,8 +33,9 @@ class TransactionsScreenTest : ScreenTest() {
         open()
         composeRule.onNodeWithText("-12.5000").assertIsDisplayed()
         composeRule.onNodeWithText("+0.1000").assertIsDisplayed()
-        composeRule.onNodeWithText("0xfB691...5d359").assertIsDisplayed()
-        composeRule.onNodeWithText("October 1, 2026 | 10:15AM").assertIsDisplayed()
+        // Both rows show the other side of the transfer: the recipient of the sent one, the sender of the received one.
+        composeRule.onAllNodesWithText("0xfB691...5d359").assertCountEquals(2)
+        composeRule.onAllNodesWithText("October 1, 2026 | 10:15AM").assertCountEquals(2)
     }
 
     @Test
