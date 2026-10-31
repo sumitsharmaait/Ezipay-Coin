@@ -34,9 +34,9 @@ class FeatureResolverTest {
     }
 
     @Test
-    fun `unknown and missing keys fall back to defaults`() {
+    fun `a key the server does not list is off`() {
         val shown = FeatureResolver.resolve(mapOf("somethingNew" to true), false)
-        assertEquals(setOf(Feature.EARN_CHECKIN, Feature.EARN_TASKS), shown)
+        assertTrue(shown.isEmpty())
     }
 
     @Test

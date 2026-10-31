@@ -5,7 +5,7 @@ object FeatureResolver {
 
     /**
      * @param remote the `features` map from App/config, or null when it could not be fetched
-     *   (404, offline, malformed). Missing keys fall back to the build default.
+     *   (404, offline, malformed). When the map is present, a missing key means off.
      * @param developerMode debug builds only: show everything, including unfinished features.
      */
     fun resolve(remote: Map<String, Boolean>?, developerMode: Boolean): Set<Feature> =
@@ -13,7 +13,12 @@ object FeatureResolver {
             when {
                 developerMode -> true
                 else -> {
-                    val wanted = feature.serverKey?.let { remote?.get(it) } ?: feature.releaseDefault
+                    val wanted = when {
+                        feature.serverKey == null -> feature.releaseDefault
+                        remote == null -> feature.releaseDefault
+                        // The server answered: a key it does not list is off.
+                        else -> remote[feature.serverKey] ?: false
+                    }
                     wanted && feature.clientSupported
                 }
             }
