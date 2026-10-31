@@ -3,6 +3,7 @@
 # Only the route column of each line, and the DTOs the app sends. Refresh by re-copying; do not hand-edit.
 # Format: '<METHOD> <path>' or 'DTO <Name> | <Field>:<Type>,...'.
 DELETE /api/v1/Content/banners/{id:int}
+DELETE /api/v1/Users/me
 DELETE /api/v1/learn/delete/{id}
 GET /api/v1/App/config
 GET /api/v1/Auth/logout

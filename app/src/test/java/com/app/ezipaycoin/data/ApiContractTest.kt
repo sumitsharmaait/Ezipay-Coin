@@ -46,6 +46,9 @@ class ApiContractTest {
         ApiService::class.java.declaredMethods.mapNotNull { m ->
             m.getAnnotation(GET::class.java)?.let { Route("GET", normalise(it.value)) }
                 ?: m.getAnnotation(POST::class.java)?.let { Route("POST", normalise(it.value)) }
+                ?: m.getAnnotation(retrofit2.http.PUT::class.java)?.let { Route("PUT", normalise(it.value)) }
+                ?: m.getAnnotation(retrofit2.http.DELETE::class.java)?.let { Route("DELETE", normalise(it.value)) }
+                ?: m.getAnnotation(retrofit2.http.HTTP::class.java)?.let { Route(it.method.uppercase(), normalise(it.path)) }
         }.sortedBy { it.toString() }
     }
 
@@ -54,15 +57,10 @@ class ApiContractTest {
 
     /**
      * Routes the app calls that the backend baseline does not have, with the reason.
-     * Payment routes are served by the vendor today (the backend exposes them under Payments/);
-     * the others have no backend route yet.
+     * These have no backend route yet. (The payment routes used to be here; they now go through
+     * the backend's Payments/ proxy and are checked against the baseline like any other.)
      */
     private val KNOWN_GAPS = mapOf(
-        Route("POST", "/networkinfobytokenid") to "vendor host today; backend route is Payments/NetworkInfobyTokenId",
-        Route("POST", "/cryptopayindeposittoken") to "vendor host today; backend route is Payments/CryptoPayinDeposittoken",
-        Route("POST", "/cryptopayouttransfertoken") to "vendor host today; backend route is Payments/CryptoPayoutTransfertoken",
-        Route("POST", "/cryptopayintransactionstatuscheck") to "vendor host today; backend route is Payments/CryptoPayinTransactionStatusCheck",
-        Route("POST", "/cardtxn") to "vendor host today; backend route is Payments/CardTxn",
         Route("POST", "/kyc/video/upload") to "no backend route",
         Route("GET", "/kyc/video/status/{}") to "no backend route",
         Route("POST", "/kyc/liveness/session") to "no backend route",
@@ -94,6 +92,7 @@ class ApiContractTest {
             Route("GET", "/dashboard"), Route("POST", "/wallet/transactions"),
             Route("GET", "/users/me"), Route("POST", "/users/updateprofile"),
             Route("POST", "/nft/mint/public"), Route("GET", "/kyc/status"), Route("POST", "/kyc/submit"),
+            Route("DELETE", "/users/me"), Route("GET", "/app/config"), Route("POST", "/payments/networkinfobytokenid"),
         )
         core.forEach { assertTrue("$it must be a backend route", it in baselineRoutes) }
         core.forEach { assertTrue("$it must be called by the app", it in appRoutes) }

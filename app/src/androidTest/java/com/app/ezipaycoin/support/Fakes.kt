@@ -103,6 +103,7 @@ class FakeAuthRepository : AuthRepository {
     override suspend fun postLogin(request: LoginRequest): BaseResponse<LoginResponse> = throw IOException("offline")
     override suspend fun updateProfile(request: UpdateProfileRequest) = BaseResponse(true, "OK", "", "ok")
     override suspend fun logout() = BaseResponse(true, "OK", "", "ok")
+    override suspend fun deleteAccount(idempotencyKey: String): BaseResponse<String?> = BaseResponse(true, "OK", "", null)
     override suspend fun updateImage(file: MultipartBody.Part) = BaseResponse(true, "OK", "", "https://img/x.png")
 }
 
