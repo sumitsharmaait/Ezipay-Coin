@@ -20,17 +20,21 @@ class PasswordGate(
     private var failures = 0
     private var lockedUntil = 0L
 
-    fun check(expected: String?, entered: String): Result {
+    fun check(expected: String?, entered: String): Result =
+        check(entered) { !expected.isNullOrEmpty() && MessageDigest.isEqual(
+            expected.toByteArray(Charsets.UTF_8),
+            entered.toByteArray(Charsets.UTF_8)
+        ) }
+
+    /** [matches] decides whether [entered] is right (e.g. against a stored verifier). */
+    fun check(entered: String, matches: (String) -> Boolean): Result {
         val now = clock()
         if (now < lockedUntil) return Result.LockedOut(lockedUntil - now)
         if (now >= lockedUntil && lockedUntil != 0L) {
             failures = 0
             lockedUntil = 0L
         }
-        val ok = !expected.isNullOrEmpty() && MessageDigest.isEqual(
-            expected.toByteArray(Charsets.UTF_8),
-            entered.toByteArray(Charsets.UTF_8)
-        )
+        val ok = matches(entered)
         if (ok) {
             failures = 0
             return Result.Ok

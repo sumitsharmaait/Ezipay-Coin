@@ -1,6 +1,9 @@
 package com.app.ezipaycoin.presentation.importfromseed
 
 import androidx.lifecycle.ViewModel
+import com.app.ezipaycoin.utils.PasswordVerifier
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
@@ -106,10 +109,12 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
                     val signatureHex = signNonceWithTrustWalletCore(res.apiData.nonce, privateKey)
                     val loginRes = repository.postLogin(LoginRequest(address, signatureHex, "2"))
                     if (loginRes.apiStatus) {
+                        val verifier = withContext(Dispatchers.Default) { PasswordVerifier.create(_uiState.value.newPassword) }
                         dataStore.updateData {
                             it.copy(
                                 isWalletCreated = true,
-                                password = _uiState.value.newPassword,
+                                passwordVerifier = verifier,
+                                password = null,
                                 walletAddress = address,
                                 walletPrivateKey = privateKey.data()
                                     .toHexString(format = HexFormat.Default),

@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
+import com.app.ezipaycoin.utils.RelockPolicy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -61,6 +62,9 @@ class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     private lateinit var navController: NavHostController
+    private val relockPolicy = RelockPolicy()
+    private var walletShared: WalletSharedViewModel? = null
+    private var unlockVm: UnlockScreenVM? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,6 +88,9 @@ class MainActivity : FragmentActivity() {
             }
         )[UnlockScreenVM::class.java]
 
+
+        walletShared = walletSharedViewModel
+        unlockVm = unlockScreenVM
 
         val bottomNavItems = App.getInstance().items
         val navigationDrawerItems = bottomNavItems + App.getInstance().navigationItems
@@ -267,6 +274,17 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
+    override fun onStop() {
+        super.onStop()
+        if (!isChangingConfigurations) relockPolicy.onBackground()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (relockPolicy.onForeground() && viewModel.uiState.value.passwordCreated) {
+            unlockVm?.reset()
+            walletShared?.onEvent(SharedEvent.AppLocked)
+        }
+    }
 }
-
-

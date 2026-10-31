@@ -55,4 +55,11 @@ class PasswordGateTest {
         g.check("p", "p")
         assertEquals(Result.Wrong(2), g.check("p", "x"))
     }
+
+    @Test
+    fun matcherOverloadUsesTheCallerDecision() {
+        val g = gate()
+        assertEquals(Result.Ok, g.check("x") { true })
+        assertEquals(Result.Wrong(2), g.check("x") { false })
+    }
 }

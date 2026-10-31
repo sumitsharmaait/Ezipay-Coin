@@ -16,4 +16,7 @@ sealed class SharedEvent {
     data class TransactionSelected(val transaction: TransactionsResponse.TransactionsItem) : SharedEvent()
 
     data object AppUnlocked : SharedEvent()
+
+    /** The app was in the background long enough: ask for the password again. */
+    data object AppLocked : SharedEvent()
 }

@@ -3,7 +3,10 @@ package com.app.ezipaycoin.presentation.viewwalletdetails
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
+import com.app.ezipaycoin.utils.PasswordCredentials
 import com.app.ezipaycoin.utils.PasswordGate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,7 +36,9 @@ class ViewWalletDetailsVM : ViewModel() {
     fun unlock() {
         viewModelScope.launch {
             val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
-            when (val result = gate.check(prefs.password, _uiState.value.password)) {
+            val entered = _uiState.value.password
+            val matched = withContext(Dispatchers.Default) { PasswordCredentials.matches(prefs, entered) }
+            when (val result = gate.check(entered) { matched }) {
                 is PasswordGate.Result.Ok -> _uiState.update {
                     it.copy(
                         unlocked = true,

@@ -18,7 +18,7 @@ sealed class DeletionResult {
  * confirmed. A failed call leaves the wallet on the device so the user can retry or back it up.
  */
 class AccountDeletion(
-    private val storedPassword: suspend () -> String?,
+    private val passwordMatches: suspend (entered: String) -> Boolean,
     private val gate: PasswordGate,
     private val deleteRemote: suspend (idempotencyKey: String) -> BaseResponse<String?>,
     private val wipeLocal: suspend () -> Unit,
@@ -28,7 +28,8 @@ class AccountDeletion(
     private var pendingKey: String? = null
 
     suspend fun run(enteredPassword: String): DeletionResult {
-        when (val check = gate.check(storedPassword(), enteredPassword)) {
+        val matched = passwordMatches(enteredPassword)
+        when (val check = gate.check(enteredPassword) { matched }) {
             is PasswordGate.Result.Wrong -> return DeletionResult.WrongPassword(check.attemptsLeft)
             is PasswordGate.Result.LockedOut -> return DeletionResult.LockedOut(check.retryAfterMillis)
             is PasswordGate.Result.Ok -> Unit

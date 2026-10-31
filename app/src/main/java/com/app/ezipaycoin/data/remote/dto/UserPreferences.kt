@@ -20,7 +20,10 @@ import java.util.Base64
 @Serializable
 data class UserPreferences(
     val isWalletCreated: Boolean = false,
+    /** Legacy plaintext password; only present until [com.app.ezipaycoin.utils.PasswordMigration] clears it. */
     val password: String? = null,
+    /** Salted PBKDF2 verifier, see [com.app.ezipaycoin.utils.PasswordVerifier]. */
+    val passwordVerifier: String? = null,
     val walletPrivateKey: String? = null,
     val walletAddress: String? = null,
     val nonce: String? = null,
