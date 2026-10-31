@@ -76,4 +76,19 @@ class FeatureResolverTest {
         assertTrue(FeatureFlags.isEnabled(Feature.STAKING_POOLS))
         FeatureFlags.applyRemoteForTest(null, developerMode = false)
     }
+
+    @Test
+    fun `refresh keeps the banners from the server`() = runTest {
+        FeatureFlags.applyRemoteForTest(null, developerMode = false)
+        val repo = object : AppConfigRepository {
+            override suspend fun getAppConfig() = ResponseState.Success(
+                AppConfigResponse(
+                    features = emptyMap(),
+                    banners = listOf(com.app.ezipaycoin.data.remote.dto.response.AppBanner(id = 7, title = "Hi"))
+                )
+            )
+        }
+        FeatureFlags.refresh(repo)
+        assertEquals(listOf(7), FeatureFlags.banners.value.map { it.id })
+    }
 }
