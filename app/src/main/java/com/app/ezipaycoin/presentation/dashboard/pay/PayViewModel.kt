@@ -45,6 +45,8 @@ class PayViewModel(
         }
     }
 
+    fun ownAddressOrNull(): String? = ownAddress
+
     fun onEvent(event: PayEvent) {
         when (event) {
             is PayEvent.PayAmount -> {

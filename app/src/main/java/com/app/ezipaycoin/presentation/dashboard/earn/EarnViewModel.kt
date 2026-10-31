@@ -213,6 +213,7 @@ class EarnViewModel(
             "TASK_NOT_ACTIVE" -> "That task isn't available today."
             "TASK_ALREADY_COMPLETED" -> "You've already completed that task today."
             "INSUFFICIENT_WATCH_TIME" -> "Spend a little longer on the task, then try again."
+            "EARN_TASK_TYPE_UNKNOWN" -> "Some tasks are unavailable right now. Please try again later."
             "FEATURE_DISABLED" -> "This isn't available yet."
             "NOT_FOUND" -> "Not available right now."
             else -> if (isRuleCode(message)) GENERIC else message

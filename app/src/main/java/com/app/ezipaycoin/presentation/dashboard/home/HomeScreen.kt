@@ -521,7 +521,7 @@ private fun BalanceCardHeader(
             ) {
                 data.crypto.forEach { item ->
                     DropdownMenuItem(
-                        text = { Text(item.symbol) },
+                        text = { Text(item.symbol.orEmpty()) },
                         onClick = {
                             viewModel.onEvent(HomeEvent.CryptoOptionChanged(item))
                             sharedViewModel.onEvent(SharedEvent.CryptoOptionChanged(item))

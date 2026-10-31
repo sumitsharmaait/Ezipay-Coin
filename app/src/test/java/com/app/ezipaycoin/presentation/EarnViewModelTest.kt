@@ -221,6 +221,10 @@ class EarnViewModelTest {
     @Test
     fun `describe tells server codes from transport messages`() {
         assertEquals("Not available right now.", EarnViewModel.describe("NOT_FOUND"))
+        assertEquals(
+            "Some tasks are unavailable right now. Please try again later.",
+            EarnViewModel.describe("EARN_TASK_TYPE_UNKNOWN")
+        )
         assertEquals("Something went wrong. Please try again.", EarnViewModel.describe("SOME_UNKNOWN_CODE"))
         assertEquals("Request failed (500).", EarnViewModel.describe("Request failed (500)."))
         assertEquals("You have already checked in today.", EarnViewModel.describe("ALREADY_CHECKED_IN|x"))

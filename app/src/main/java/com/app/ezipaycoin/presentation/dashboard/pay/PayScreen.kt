@@ -398,15 +398,16 @@ private fun RecentPayeesSection(
             } else if (state.responseState is ResponseState.Success) {
                 val data =
                     (state.responseState as ResponseState.Success<BaseResponse<TransactionsResponse>>).data.apiData
-                if (data.items.isEmpty()) {
+                val payees = recentPayees(data.items, vm.ownAddressOrNull())
+                if (payees.isEmpty()) {
                     Text(
-                        "No Transactions Found!!",
+                        "No recent payees yet",
                         style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
                     )
                 } else {
-                    data.items.forEachIndexed { index, payee ->
+                    payees.forEachIndexed { index, payee ->
                         RecentPayeeItem(item = payee)
-                        if (index < data.items.lastIndex) {
+                        if (index < payees.lastIndex) {
                             HorizontalDivider(
                                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                 modifier = Modifier.padding(start = 0.dp)
@@ -456,7 +457,7 @@ fun RecentPayeeItem(item: TransactionsResponse.TransactionsItem) {
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                item.to.shortenAddress(),
+                item.to.orEmpty().shortenAddress(),
                 maxLines = 1,
                 modifier = Modifier.padding(end = 8.dp),
                 style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor)
@@ -472,11 +473,7 @@ fun RecentPayeeItem(item: TransactionsResponse.TransactionsItem) {
             )
         }
         Text(
-            text = if (item.type.equals(
-                    "send",
-                    true
-                )
-            ) "-" + item.formattedAmount else "+" + item.formattedAmount,
+            text = item.amountLabel,
             style = MaterialTheme.typography.titleMedium.copy(
                 color = if (item.type.equals(
                         "send",
@@ -654,7 +651,7 @@ private fun PaymentDetailsSection(
             ) {
                 sharedState.dashboardResponse?.crypto?.forEach { item ->
                     DropdownMenuItem(
-                        text = { Text(item.symbol) },
+                        text = { Text(item.symbol.orEmpty()) },
                         onClick = {
                             sharedViewModel.onEvent(SharedEvent.CryptoOptionChanged(item))
                             vm.onEvent(PayEvent.CurrentOptionChanged(item))
