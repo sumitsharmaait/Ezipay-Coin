@@ -11,5 +11,6 @@ data class SharedState(
     var dashboardResponse: DashboardResponse? = null,
     //var isRegistered: Boolean = false,
     var selectedTransaction: TransactionsResponse.TransactionsItem? = null,
-    var isUnlocked: Boolean = false
+    var isUnlocked: Boolean = false,
+    var isRefreshing: Boolean = false
 )

@@ -56,7 +56,12 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -139,9 +144,15 @@ fun HomeScreen(
     val sharedState by sharedViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-//    LaunchedEffect(Unit) {
-//        sharedViewModel.onEvent(SharedEvent.FetchBalance)
-//    }
+    // Refresh when the app returns to the foreground; the view model throttles repeats.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) sharedViewModel.onEvent(SharedEvent.RefreshIfStale)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     when (sharedState.responseState) {
         is ResponseState.Loading -> {
@@ -151,7 +162,13 @@ fun HomeScreen(
         is ResponseState.Success -> {
             val data =
                 (sharedState.responseState as ResponseState.Success<BaseResponse<DashboardResponse>>).data.apiData
-            HomeSuccessData(state, data, viewModel, sharedViewModel, sharedState, navController, context)
+            PullToRefreshBox(
+                isRefreshing = sharedState.isRefreshing,
+                onRefresh = { sharedViewModel.onEvent(SharedEvent.PullRefresh) },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                HomeSuccessData(state, data, viewModel, sharedViewModel, sharedState, navController, context)
+            }
         }
 
         is ResponseState.Error -> {
