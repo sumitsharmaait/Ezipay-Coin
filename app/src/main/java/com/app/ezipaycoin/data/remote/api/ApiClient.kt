@@ -38,7 +38,7 @@ object ApiClient {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client1)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(EnvelopeAdapterFactory.gson))
             .build()
     }
 
@@ -46,7 +46,7 @@ object ApiClient {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(EnvelopeAdapterFactory.gson))
             .build()
     }
 
@@ -56,7 +56,7 @@ object ApiClient {
         Retrofit.Builder()
             .baseUrl(BuildConfig.RPC_URL)
             .client(client1)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(EnvelopeAdapterFactory.gson))
             .build()
     }
 
@@ -65,7 +65,8 @@ object ApiClient {
             val original = chain.request()
             val requestBuilder = original.newBuilder()
 
-            SessionManager.token?.let { token ->
+            // Pre-login calls (nonce, login) have no token yet: send no header at all.
+            SessionManager.token?.takeIf { it.isNotBlank() }?.let { token ->
                 requestBuilder.addHeader("Authorization", "Bearer $token")
             }
 

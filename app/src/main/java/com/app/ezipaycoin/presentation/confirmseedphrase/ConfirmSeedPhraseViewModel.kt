@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.confirmseedphrase
 
 import android.util.Log
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
@@ -139,7 +140,7 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
                     it.copy(
                         isAllConfirmed = true,
                         responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }

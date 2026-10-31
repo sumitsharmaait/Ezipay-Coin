@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.data.repository
 
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
+import com.app.ezipaycoin.utils.UserMessages
 import com.app.ezipaycoin.utils.ResponseState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,6 @@ internal suspend fun <T> envelopeCall(call: suspend () -> BaseResponse<T>): Resp
         } catch (e: IOException) {
             ResponseState.Error("Can't reach the network. Check your connection and try again.")
         } catch (e: Exception) {
-            ResponseState.Error(e.message ?: "Something went wrong.")
+            ResponseState.Error(UserMessages.of(e, "Something went wrong."))
         }
     }

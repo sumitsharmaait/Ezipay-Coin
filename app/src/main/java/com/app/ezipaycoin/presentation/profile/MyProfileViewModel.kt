@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.profile
 
 import androidx.datastore.core.DataStore
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferences
@@ -123,7 +124,7 @@ class MyProfileViewModel(
                 _uiState.update {
                     it.copy(
                         uploadImageResponseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }
@@ -153,7 +154,7 @@ class MyProfileViewModel(
                 _uiState.update {
                     it.copy(
                         logoutResponseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }
@@ -194,7 +195,7 @@ class MyProfileViewModel(
                 _uiState.update {
                     it.copy(
                         responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }

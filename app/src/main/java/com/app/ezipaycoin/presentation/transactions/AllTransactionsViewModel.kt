@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.transactions
 
 import androidx.lifecycle.ViewModel
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.request.TransactionsRequest
 import com.app.ezipaycoin.domain.repository.TransactionsRepository
@@ -88,7 +89,7 @@ class AllTransactionsViewModel(private val repository: TransactionsRepository) :
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                fail(filter, e.localizedMessage ?: "Unknown error")
+                fail(filter, UserMessages.of(e, "Unknown error"))
             }
         }
     }

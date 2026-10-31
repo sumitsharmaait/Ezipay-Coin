@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.kyc
 
 import android.os.Build
+import com.app.ezipaycoin.utils.UserMessages
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -304,7 +305,7 @@ class KycViewModel(
                     _uiState.update {
                         it.copy(
                             statusResponse = ResponseState.Error(
-                                e.message ?: "Couldn't load status"
+                                UserMessages.of(e, "Couldn't load status")
                             )
                         )
                     }
@@ -367,7 +368,7 @@ class KycViewModel(
                     _uiState.update {
                         it.copy(
                             submitResponse = ResponseState.Error(
-                                e.message ?: "Something went wrong"
+                                UserMessages.of(e, "Something went wrong")
                             )
                         )
                     }

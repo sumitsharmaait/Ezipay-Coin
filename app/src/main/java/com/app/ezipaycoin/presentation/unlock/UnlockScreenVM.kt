@@ -136,7 +136,7 @@ class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
                 }
                 _eventFlow.emit(UnlockScreenVMEvent.Unlocked)
             } catch (e: Exception) {
-                showError(e.localizedMessage)
+                showError(if (com.app.ezipaycoin.utils.UserMessages.isParseError(e)) com.app.ezipaycoin.utils.UserMessages.UNEXPECTED_RESPONSE else e.localizedMessage)
             }
 
         }
