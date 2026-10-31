@@ -17,7 +17,8 @@ class ViewSeedPhraseViewModel(private val repository: AuthRepoImpl) : ViewModel(
 
     init {
         viewModelScope.launch {
-            val wallet = WalletManager.createNewWallet()
+            // A social sign-up has already created the wallet in memory; show that seed, not a new one.
+            val wallet = if (WalletManager.isInitialized()) WalletManager.wallet else WalletManager.createNewWallet()
             _uiState.value = _uiState.value.copy(seedWords = wallet.mnemonic().split(" "))
         }
     }

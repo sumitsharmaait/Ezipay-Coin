@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.presentation.splash
 
+import androidx.datastore.core.CorruptionException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
@@ -15,7 +16,11 @@ class SplashViewModel : ViewModel() {
 
     init {
         viewModelScope.launch {
-            val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
+            val prefs = try {
+                UserPreferencesRepository.userPreferencesFlow.data.first()
+            } catch (e: CorruptionException) {
+                return@launch // MainActivity shows the recovery screen
+            }
             val isWalletCreated = prefs.isWalletCreated
             _uiState.value = _uiState.value.copy(
                 isLoggedIn = isWalletCreated

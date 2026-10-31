@@ -1,5 +1,7 @@
 package com.app.ezipaycoin.presentation.importfromseed
 
+import androidx.compose.ui.text.input.ImeAction
+import com.app.ezipaycoin.utils.SecureScreen
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -68,6 +70,7 @@ fun ImportFromSeedScreen(
     navController: NavController,
     viewModel: ImportFromSeedViewModel
 ) {
+    SecureScreen()
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -249,7 +252,11 @@ private fun SeedPhraseField(
             value = seedPhrase,
             onValueChange = onSeedPhraseChange,
             label = "Seed Phrase",
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+            keyboardOptions = KeyboardOptions(
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Done
+            ),
             minLines = 2,
             isTextArea = true,
             modifier = Modifier.weight(1f),

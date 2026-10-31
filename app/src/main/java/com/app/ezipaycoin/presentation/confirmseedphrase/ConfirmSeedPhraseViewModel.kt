@@ -106,11 +106,12 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
                                 token = loginRes.apiData.token,
                                 userName = loginRes.apiData.user.name,
                                 userEmail = loginRes.apiData.user.email,
-                                userProfile = loginRes.apiData.user.profilePic,
+                                userProfile = loginRes.apiData.user.profilePic ?: WalletManager.pendingProfilePic,
                                 seedPhrase = originalSeeds.joinToString(separator = " ")
                             )
                         }
 
+                        WalletManager.pendingProfilePic = null
                         _uiState.update {
                             it.copy(
                                 isAllConfirmed = true,

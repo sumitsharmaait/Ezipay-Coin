@@ -16,6 +16,9 @@ object WalletManager {
 
     fun isInitialized(): Boolean = _wallet != null
 
+    /** Photo URL from a social sign-up, held until the wallet is persisted after the seed backup. */
+    var pendingProfilePic: String? = null
+
     /** BSC receive address, or null when the wallet isn't unlocked yet. */
     val address: String?
         get() = _wallet?.getAddressForCoin(CoinType.SMARTCHAIN)

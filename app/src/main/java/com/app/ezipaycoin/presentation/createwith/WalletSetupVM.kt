@@ -84,21 +84,10 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
                         val updateProfileRes =
                             repository.updateProfile(UpdateProfileRequest(name, email))
                         if (updateProfileRes.apiStatus) {
-                            val dataStore = UserPreferencesRepository.userPreferencesFlow
-                            dataStore.updateData { prefs ->
-                                prefs.copy(
-                                    isWalletCreated = true,
-                                    walletAddress = address,
-                                    walletPrivateKey = privateKey.data()
-                                        .toHexString(format = HexFormat.Default),
-                                    nonce = res.apiData.nonce,
-                                    token = loginRes.apiData.token,
-                                    userName = name,
-                                    userEmail = email,
-                                    userProfile = loginRes.apiData.user.profilePic ?: pic,
-                                    seedPhrase = wallet.mnemonic()
-                                )
-                            }
+                            // Nothing is stored yet. The wallet stays in memory until the user has set a
+                            // password and confirmed the seed phrase; ConfirmSeedPhraseViewModel then
+                            // encrypts and persists it.
+                            WalletManager.pendingProfilePic = loginRes.apiData.user.profilePic ?: pic
                             _uiState.update {
                                 it.copy(
                                     responseState = ResponseState.Success(res)
@@ -113,6 +102,10 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
                                     )
                                 )
                             }
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(responseState = ResponseState.Error(loginRes.apiMessage))
                         }
                     }
 

@@ -40,7 +40,21 @@ import com.app.ezipaycoin.ui.composables.AppGreyButton
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
 import com.app.ezipaycoin.ui.theme.grey_9
-import com.app.ezipaycoin.utils.copyToClipboard
+import com.app.ezipaycoin.ui.composables.AppTextField
+import com.app.ezipaycoin.utils.SecureScreen
+import com.app.ezipaycoin.utils.SensitiveClipboard
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 
 
 @Composable
@@ -48,8 +62,76 @@ fun ViewWalletDetails(
     navController: NavController,
     vm: ViewWalletDetailsVM
 ) {
+    SecureScreen()
     val state by vm.uiState.collectAsState()
     val context = LocalContext.current
+    var showCopyWarning by remember { mutableStateOf(false) }
+
+    // Leaving the app hides the secrets; the password is asked for again.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) vm.lock()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (!state.unlocked) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Enter your password to view your seed phrase and private key.",
+                style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            AppTextField(
+                value = state.password,
+                onValueChange = vm::onPasswordChange,
+                label = "Password",
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+            )
+            if (state.passwordError.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = state.passwordError, color = MaterialTheme.colorScheme.error)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            AppGreyButton(
+                labelColor = TextPrimaryColor,
+                label = "Show",
+                onClick = vm::unlock,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        return
+    }
+
+    if (showCopyWarning) {
+        AlertDialog(
+            onDismissRequest = { showCopyWarning = false },
+            title = { Text("Copy seed phrase?") },
+            text = {
+                Text(
+                    "Other apps can read the clipboard. Anyone with this phrase controls your funds. " +
+                            "It is removed from the clipboard after 60 seconds."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCopyWarning = false
+                    SensitiveClipboard.copy(context, state.seedPhrase, "Seed Phrase")
+                }) { Text("Copy") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCopyWarning = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -61,7 +143,6 @@ fun ViewWalletDetails(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-
         Text(
             text = "Private Key",
             style = MaterialTheme.typography.titleMedium.copy(
@@ -70,7 +151,6 @@ fun ViewWalletDetails(
                 fontWeight = FontWeight(400)
             ),
         )
-
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -86,8 +166,9 @@ fun ViewWalletDetails(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.End
             ) {
+                // The private key can be read but not copied.
                 Text(
-                    text = state.privateKey,
+                    text = if (state.privateKeyRevealed) state.privateKey else "\u2022".repeat(32),
                     style = MaterialTheme.typography.titleMedium.copy(
                         textAlign = TextAlign.Center,
                         color = TextPrimaryColor,
@@ -98,10 +179,8 @@ fun ViewWalletDetails(
 
                 AppGreyButton(
                     labelColor = TextPrimaryColor,
-                    label = "Copy",
-                    onClick = {
-                         context.copyToClipboard(state.privateKey, "Private Key")
-                    },
+                    label = if (state.privateKeyRevealed) "Hide" else "Reveal",
+                    onClick = vm::toggleKeyReveal,
                     modifier = Modifier
                         .fillMaxWidth(0.3f)
                 )
@@ -135,7 +214,7 @@ fun ViewWalletDetails(
             contentAlignment = Alignment.Center
         ) {
             RevealedSeedPhraseView(seedWords = state.seedPhrase.split(" "), onCopy = {
-                context.copyToClipboard(state.seedPhrase, "Seed Phrase")
+                showCopyWarning = true
             })
         }
 

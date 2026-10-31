@@ -17,6 +17,7 @@ import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 @Composable
 fun Navigation(
     isLoggedIn: Boolean,
+    passwordCreated: Boolean,
     navHostController: NavHostController,
     apiService: ApiService,
     walletSharedViewModel: WalletSharedViewModel
@@ -35,7 +36,13 @@ fun Navigation(
 
     NavHost(
         navController = navHostController,
-        startDestination = if (isLoggedIn) Screen.BottomNavScreens else Screen.Auth,
+        // A wallet without a password (an older sign-up path could leave one) goes through
+        // password creation before the app opens.
+        startDestination = when {
+            isLoggedIn && !passwordCreated -> Screen.Auth.CreatePassword
+            isLoggedIn -> Screen.BottomNavScreens
+            else -> Screen.Auth
+        },
         enterTransition = {
             fadeIn(animationSpec = tween(1000))
         },

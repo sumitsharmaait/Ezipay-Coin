@@ -92,7 +92,11 @@ class MainActivity : FragmentActivity() {
             RequestNotificationPermissionOnce()
             val sharedState by walletSharedViewModel.uiState.collectAsState()
             val state by viewModel.uiState.collectAsState()
-            if (!sharedState.isUnlocked && state.passwordCreated) {
+            if (state.storageError) {
+                EzipayCoinTheme {
+                    StorageRecoveryScreen(onRestoreFromSeed = viewModel::startRecovery)
+                }
+            } else if (!sharedState.isUnlocked && state.passwordCreated) {
                 UnlockScreen(
                     onUnlocked = { walletSharedViewModel.onEvent(SharedEvent.AppUnlocked) },
                     viewModel = unlockScreenVM
@@ -248,6 +252,7 @@ class MainActivity : FragmentActivity() {
                                     // Root NavHost
                                     Navigation(
                                         state.isLoggedIn,
+                                        passwordCreated = state.passwordCreated,
                                         navHostController = navController,
                                         apiService,
                                         walletSharedViewModel
