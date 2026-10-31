@@ -20,6 +20,7 @@ object FeatureFlags {
 
     private var prefs: android.content.SharedPreferences? = null
     private var remote: Map<String, Boolean>? = null
+    private var lastKnown: Map<String, Boolean> = emptyMap()
 
     private val _enabled = MutableStateFlow(FeatureResolver.defaults(developerMode = false))
     val enabled: StateFlow<Set<Feature>> = _enabled.asStateFlow()
@@ -38,8 +39,18 @@ object FeatureFlags {
         prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val stored = developerModeAvailable && runCatching { prefs?.getBoolean(KEY_DEV_MODE, false) }.getOrNull() == true
         _developerMode.value = stored
+        lastKnown = Feature.entries
+            .filter { it.cacheLastKnown }
+            .mapNotNull { feature ->
+                val key = feature.serverKey ?: return@mapNotNull null
+                val prefKey = lastKnownPrefKey(key)
+                val saved = runCatching { prefs?.takeIf { it.contains(prefKey) }?.getBoolean(prefKey, false) }.getOrNull()
+                saved?.let { key to it }
+            }.toMap()
         recompute()
     }
+
+    private fun lastKnownPrefKey(serverKey: String) = "last_known_$serverKey"
 
     fun isEnabled(feature: Feature): Boolean = feature in _enabled.value
 
@@ -55,9 +66,25 @@ object FeatureFlags {
         val result = repository.getAppConfig()
         if (result !is ResponseState.Success) return false
         remote = result.data.features
+        storeLastKnown(result.data.features)
         _banners.value = result.data.banners.orEmpty()
         recompute()
         return true
+    }
+
+    /** Keeps the server's answer for the features the onboarding screen needs before any login. */
+    private fun storeLastKnown(features: Map<String, Boolean>?) {
+        val toStore = Feature.entries.filter { it.cacheLastKnown && it.serverKey != null }
+        if (toStore.isEmpty()) return
+        runCatching {
+            prefs?.edit()?.apply {
+                toStore.forEach { feature ->
+                    val key = feature.serverKey!!
+                    // A map without the key means the server has switched it off.
+                    putBoolean(lastKnownPrefKey(key), features?.get(key) ?: false)
+                }
+            }?.apply()
+        }
     }
 
     internal fun applyRemoteForTest(features: Map<String, Boolean>?, developerMode: Boolean) {
@@ -67,6 +94,6 @@ object FeatureFlags {
     }
 
     private fun recompute() {
-        _enabled.value = FeatureResolver.resolve(remote, _developerMode.value)
+        _enabled.value = FeatureResolver.resolve(remote, _developerMode.value, lastKnown)
     }
 }
