@@ -25,6 +25,7 @@ datastorePreferences = "1.1.1"
 okhttp = "4.12.0"
 playServicesAuth = "21.4.0"
 retrofit = "2.9.0"
+foundation = "1.11.4"
 
 
 
@@ -65,6 +66,7 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

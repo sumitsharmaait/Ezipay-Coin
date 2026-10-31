@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -56,7 +57,6 @@ import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.EzipayCoinTheme
 import com.app.ezipaycoin.utils.ViewModelFactory
 import kotlinx.coroutines.launch
-
 class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels()

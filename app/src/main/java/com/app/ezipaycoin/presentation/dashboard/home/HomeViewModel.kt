@@ -32,6 +32,10 @@ class HomeViewModel(private val homeRepository: HomeRepository) : ViewModel() {
                     it.copy(comingSoonDialogue = event.isVisible)
                 }
             }
+
+            is HomeEvent.DismissAnnouncement -> {
+                _uiState.update { it.copy(showAnnouncement = false) }
+            }
         }
     }
 

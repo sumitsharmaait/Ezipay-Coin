@@ -5,6 +5,7 @@ import wallet.core.jni.Curve
 import wallet.core.jni.HDWallet
 import wallet.core.jni.Hash
 import wallet.core.jni.PrivateKey
+import wallet.core.jni.CoinType
 
 object WalletManager {
 
@@ -14,6 +15,10 @@ object WalletManager {
         get() = _wallet ?: throw IllegalStateException("Wallet not initialized.")
 
     fun isInitialized(): Boolean = _wallet != null
+
+    /** BSC receive address, or null when the wallet isn't unlocked yet. */
+    val address: String?
+        get() = _wallet?.getAddressForCoin(CoinType.SMARTCHAIN)
 
     fun createNewWallet(): HDWallet {
         val wallet = HDWallet(128, "")

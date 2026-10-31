@@ -85,6 +85,21 @@ sealed class Screen(val route: String) {
         @Serializable
         data object WalletDetails
 
+        @Serializable
+        data object KycStatus
+
+        @Serializable
+        data object KycUpload
+
+        @Serializable
+        data object AddToken
+
+        @Serializable
+        data object NftMint
+
+        @Serializable
+        data class NftDetail(val tokenId: Long)
+
     }
 
     @Serializable

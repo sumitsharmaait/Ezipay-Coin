@@ -19,9 +19,11 @@ dependencyResolutionManagement {
         mavenCentral()
         maven {
             url = uri("https://maven.pkg.github.com/trustwallet/wallet-core")
+            // GitHub Packages requires a classic PAT with read:packages (fine-grained tokens are rejected).
+            // Set gpr.user / gpr.key in ~/.gradle/gradle.properties, or GPR_USER / GPR_KEY in the environment.
             credentials {
-                username = "ait_lalit"
-                password = "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"
+                username = providers.gradleProperty("gpr.user").orElse(providers.environmentVariable("GPR_USER")).orNull
+                password = providers.gradleProperty("gpr.key").orElse(providers.environmentVariable("GPR_KEY")).orNull
             }
         }
     }

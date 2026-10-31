@@ -54,6 +54,9 @@ import androidx.navigation.NavController
 import com.app.ezipaycoin.R
 import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
 import com.app.ezipaycoin.navigation.Screen
+import com.app.ezipaycoin.presentation.nft.NftHoldingsSection
+import com.app.ezipaycoin.presentation.nft.NftNavEvent
+import com.app.ezipaycoin.presentation.nft.NftViewModel
 import com.app.ezipaycoin.presentation.shared.SharedEvent
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.ui.composables.AppGreyButton
@@ -72,25 +75,47 @@ import com.app.ezipaycoin.ui.theme.grey_23
 import com.app.ezipaycoin.ui.theme.grey_9
 import com.app.ezipaycoin.ui.theme.receivedAmountTextColor
 import com.app.ezipaycoin.ui.theme.sendAmountTextColor
+import com.app.ezipaycoin.utils.ObserveAsEvents
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+
+/** Segments shown above the asset list. */
+private enum class WalletSegment(val label: String) {
+    TOKENS("Tokens"),
+    NFTS("NFTs")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletScreen(
     navController: NavController,
     viewModel: WalletViewModel,
-    sharedViewModel: WalletSharedViewModel
+    sharedViewModel: WalletSharedViewModel,
+    nftViewModel: NftViewModel
 ) {
 
     val state by viewModel.uiState.collectAsState()
     val sharedState by sharedViewModel.uiState.collectAsState()
+    val nftState by nftViewModel.state.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
+    var segment by remember { mutableStateOf(WalletSegment.TOKENS) }
 
     ComingSoonAlert(showDialog = showDialog) {
         showDialog = false
+    }
+
+    ObserveAsEvents(nftViewModel.navEvents) { event ->
+        when (event) {
+            is NftNavEvent.ToDetail ->
+                navController.navigate(Screen.AppNavScreens.NftDetail(event.tokenId))
+
+            NftNavEvent.ToMint ->
+                navController.navigate(Screen.AppNavScreens.NftMint)
+
+            NftNavEvent.Back -> Unit
+        }
     }
 
     Column(
@@ -208,56 +233,88 @@ fun WalletScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // ── NFT: segment selector ──────────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                "List of tokens",
-                style = MaterialTheme.typography.titleSmall.copy(color = Color.White)
-            )
-            Text(
-                "View All",
-                style = MaterialTheme.typography.titleSmall.copy(color = Color.White),
-                modifier = Modifier.clickable { /* TODO: Navigate to full token list */ }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        sharedState.dashboardResponse?.crypto?.let { crypt ->
-            sharedState.dashboardResponse?.marketSnapshot?.let { snaps ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(greyButtonBackground, MaterialTheme.shapes.medium)
-                        .clip(MaterialTheme.shapes.medium)
-                ) {
-                    crypt.forEachIndexed { index, token ->
-                        TokenRow(tokenInfo = token, index, snaps, viewModel)
-                        if (index < crypt.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 0.dp),
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                    }
-                }
+            WalletSegment.entries.forEach { item ->
+                AppGreyButton(
+                    labelColor = if (segment == item) Color.White else grey_9,
+                    label = item.label,
+                    onClick = { segment = item },
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
-
         Spacer(modifier = Modifier.height(16.dp))
+        // ──────────────────────────────────────────────────────────────────────
 
-        AppGreyButton(
-            labelColor = Color.White,
-            label = "+ Add Token",
-            onClick = { showDialog = true },
-            modifier = Modifier
-                .fillMaxWidth()
-        )
+        when (segment) {
+
+            WalletSegment.TOKENS -> {
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "List of tokens",
+                        style = MaterialTheme.typography.titleSmall.copy(color = Color.White)
+                    )
+                    Text(
+                        "View All",
+                        style = MaterialTheme.typography.titleSmall.copy(color = Color.White),
+                        modifier = Modifier.clickable { /* TODO: Navigate to full token list */ }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                sharedState.dashboardResponse?.crypto?.let { crypt ->
+                    sharedState.dashboardResponse?.marketSnapshot?.let { snaps ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(greyButtonBackground, MaterialTheme.shapes.medium)
+                                .clip(MaterialTheme.shapes.medium)
+                        ) {
+                            crypt.forEachIndexed { index, token ->
+                                TokenRow(tokenInfo = token, index, snaps, viewModel)
+                                if (index < crypt.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 0.dp),
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                AppGreyButton(
+                    labelColor = Color.White,
+                    label = "+ Add Token",
+                    onClick = { showDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                )
+            }
+
+            // ── NFT: holdings grid ─────────────────────────────────────────────
+            WalletSegment.NFTS -> NftHoldingsSection(
+                state = nftState,
+                onEvent = nftViewModel::onEvent,
+                modifier = Modifier.fillMaxWidth()
+            )
+            // ───────────────────────────────────────────────────────────────────
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -514,4 +571,3 @@ private fun TokenRow(
         )
     }
 }
-

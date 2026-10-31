@@ -35,7 +35,7 @@ android {
         buildConfigField("String", "USDT_TOKEN_CONTRACT", "\"0x55d398326f99059fF775485246999027B3197955\"")
     }
 
-     signingConfigs {
+    signingConfigs {
         create("release") {
             storeFile = file("../coin_keystore") // path to your keystore
             storePassword = "EzipayCoin"
@@ -52,6 +52,11 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+        }
+
+        debug {
+            // Local override kept from this checkout's ApiClient: a platform API on the host.
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:5009/api/v1/\"")
         }
 
         // Local sandbox: a debug build wired to the zero-cost sandbox in ezipay-coin-platform
@@ -116,7 +121,7 @@ dependencies {
     // For Icons
     implementation("androidx.compose.material:material-icons-core:1.6.7") // Or latest
     implementation("androidx.compose.material:material-icons-extended:1.6.7")
-   // implementation(libs.androidx.navigation.runtime.android)
+    // implementation(libs.androidx.navigation.runtime.android)
     implementation("androidx.activity:activity:1.8.1")
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.okhttp)
@@ -143,6 +148,7 @@ dependencies {
     implementation(libs.androidx.camera.extensions)
 // ML Kit Barcode Scanner
     implementation(libs.barcode.scanning)
+    implementation(libs.androidx.compose.foundation)
 //    testImplementation(libs.junit)
 //    androidTestImplementation(libs.androidx.junit)
 //    androidTestImplementation(libs.androidx.espresso.core)
@@ -150,4 +156,10 @@ dependencies {
 //    androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
 //    debugImplementation(libs.androidx.ui.test.manifest)
+
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+
 }

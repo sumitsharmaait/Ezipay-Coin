@@ -3,6 +3,7 @@ package com.app.ezipaycoin.ui.composables
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -40,12 +41,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.GoldAccentColor
 import com.app.ezipaycoin.ui.theme.Gradient_1
@@ -57,29 +61,37 @@ import com.app.ezipaycoin.ui.theme.TextPrimaryColor
 import com.app.ezipaycoin.ui.theme.greyButtonBackground
 
 @Composable
-fun GoldGradientButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val goldGradient = Brush.linearGradient(
-        colors = listOf(Gradient_1, Gradient_2, Gradient_3, Gradient_4)
+fun GoldGradientButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val goldGradient = Brush.horizontalGradient(
+        listOf(Gradient_1, Gradient_2, Gradient_3, Gradient_4)
     )
-    Button(
-        onClick = onClick,
+    Box(
         modifier = modifier
-            .fillMaxWidth(0.8f)
-            .clip(RoundedCornerShape(80))
+            .clip(RoundedCornerShape(percent = 50))
             .background(goldGradient)
-            .height(ButtonDefaults.MinHeight),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent,
-            contentColor = Color.White
-        )
+            .clickable(role = Role.Button) { onClick() }
+            .padding(horizontal = 24.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(
-            label,
-            color = Color.White,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight(500))
+            text = label,
+            color = Color(0xFF4A3A12),
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp,
+                fontSize = 17.sp,
+                shadow = Shadow(
+                    color = Color(0xFFF5E6B0).copy(alpha = 0.7f),
+                    offset = Offset(0f, 1.5f),
+                    blurRadius = 1.5f
+                )
+            )
         )
     }
-
 }
 
 @Composable

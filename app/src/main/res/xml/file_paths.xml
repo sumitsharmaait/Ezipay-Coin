@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Matches createCaptureUri(): files written to context.cacheDir/kyc/ -->
+    <cache-path
+        name="kyc_captures"
+        path="kyc/" />
+</paths>

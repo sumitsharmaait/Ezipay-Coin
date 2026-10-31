@@ -12,10 +12,18 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
+//    private const val BASE_URL = "https://api.ezipaycoin.com/api/v1/"
+//    private const val BASE_URL = "http://127.0.0.1:5000/api/v1/"
+//    private const val BASE_URL = "http://localhost:5000/api/v1/"
+//    private const val BASE_URL = "http:/192.168.29.206:5000/api/v1/"
+    // 5009, not 5000: macOS AirPlay Receiver owns port 5000 on dev machines.
     // Per build type; see app/build.gradle.kts.
     private const val BASE_URL = BuildConfig.API_BASE_URL
+
     private val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY // Or HEADERS, BASIC, NONE
+//        level = HttpLoggingInterceptor.Level.BODY // Or HEADERS, BASIC, NONE
+//        level = HttpLoggingInterceptor.Level.BASIC
+        level = HttpLoggingInterceptor.Level.HEADERS
     }
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -242,6 +243,14 @@ fun MyProfile(
                     "Verifications",
                     "Pending",
                 ) { /* TODO */ },
+                SettingItem(
+                    Icons.Filled.PersonOutline,
+                    "KYC Upload",
+                    "Pending",
+                ) { /* TODO */
+                    Log.d("My Profile", "MyProfile: KYC Upload Item Clicked !!")
+                    navController.navigate(Screen.AppNavScreens.KycUpload)
+                },
                 SettingItem(
                     Icons.Filled.Shield,
                     "Security"

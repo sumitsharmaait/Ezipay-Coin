@@ -19,7 +19,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import wallet.core.jni.PrivateKey
+import kotlin.coroutines.resume
 
 class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(UnlockState())
@@ -82,62 +84,75 @@ class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
             }
 
             try {
-                var token = ""
-                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        token = task.result
-                        Log.d("FCM", "Current token: $token")
-                    }
-                }
-                dataStoreData?.walletAddress?.let { wallet ->
-                    val res = repository.getNonce(wallet)
-                    if (res.apiStatus) {
-                        val signatureHex = signNonceWithTrustWalletCore(
-                            res.apiData.nonce,
-                            PrivateKey(
-                                dataStoreData?.walletPrivateKey?.removePrefix("0x")
-                                    ?.hexToByteArray()
-                            )
-                        )
-                        val loginRes =
-                            repository.postLogin(LoginRequest(wallet, signatureHex, token))
-                        if (loginRes.apiStatus) {
-                            SessionManager.token = loginRes.apiData.token
-                            dataStore.updateData { pref ->
-                                pref.copy(
-                                    token = loginRes.apiData.token,
-                                    userProfile = loginRes.apiData.user.profilePic
-                                        ?: dataStoreData?.userProfile
-                                )
-                            }
-                            _uiState.update {
-                                it.copy(
-                                    responseState = ResponseState.Success(loginRes)
-                                )
-                            }
-                            _eventFlow.emit(UnlockScreenVMEvent.Unlocked)
-                        }
-                    }
-
+                val wallet = dataStoreData?.walletAddress
+                val privateKey = dataStoreData?.walletPrivateKey
+                if (dataStoreData?.isWalletCreated != true || wallet == null || privateKey == null) {
+                    // Password was saved but wallet setup never finished; unlock so the
+                    // Auth graph can take the user back through setup.
+                    _uiState.update { it.copy(responseState = ResponseState.Idle) }
+                    _eventFlow.emit(UnlockScreenVMEvent.Unlocked)
+                    return@launch
                 }
 
-
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
-                        )
+                val token = fetchFcmToken()
+                val res = repository.getNonce(wallet)
+                if (!res.apiStatus) {
+                    showError(res.apiMessage)
+                    return@launch
+                }
+                val signatureHex = signNonceWithTrustWalletCore(
+                    res.apiData.nonce,
+                    PrivateKey(privateKey.removePrefix("0x").hexToByteArray())
+                )
+                val loginRes = repository.postLogin(LoginRequest(wallet, signatureHex, token))
+                if (!loginRes.apiStatus) {
+                    showError(loginRes.apiMessage)
+                    return@launch
+                }
+                SessionManager.token = loginRes.apiData.token
+                dataStore.updateData { pref ->
+                    pref.copy(
+                        token = loginRes.apiData.token,
+                        userProfile = loginRes.apiData.user.profilePic
+                            ?: dataStoreData?.userProfile
                     )
                 }
+                _uiState.update {
+                    it.copy(
+                        responseState = ResponseState.Success(loginRes)
+                    )
+                }
+                _eventFlow.emit(UnlockScreenVMEvent.Unlocked)
+            } catch (e: Exception) {
+                showError(e.localizedMessage)
             }
 
         }
 
     }
 
+    private fun showError(message: String?) {
+        _uiState.update {
+            it.copy(
+                responseState = ResponseState.Error(
+                    message?.takeIf { msg -> msg.isNotBlank() } ?: "Unable to unlock. Please try again."
+                )
+            )
+        }
+    }
+
+    /** Waits for the FCM token; login still proceeds without one. */
+    private suspend fun fetchFcmToken(): String = suspendCancellableCoroutine { cont ->
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            val token = if (task.isSuccessful) task.result.orEmpty() else ""
+            Log.d("FCM", "Current token: $token")
+            if (cont.isActive) cont.resume(token)
+        }
+    }
+
     private fun verifyPassword() {
         viewModelScope.launch {
+            _uiState.update { it.copy(passwordError = "") }
             dataStoreData?.password?.let {
                 if (it.contentEquals(_uiState.value.password)) {
                     postLogin()

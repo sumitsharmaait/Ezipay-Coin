@@ -17,6 +17,11 @@ import com.app.ezipaycoin.presentation.dashboard.wallet.WalletViewModel
 import com.app.ezipaycoin.presentation.shared.WalletSharedViewModel
 import com.app.ezipaycoin.utils.ViewModelFactory
 
+import com.app.ezipaycoin.data.repository.NftRepoImpl
+import com.app.ezipaycoin.presentation.nft.NftViewModel
+import com.app.ezipaycoin.utils.SessionManager
+import com.app.ezipaycoin.utils.WalletManager
+
 fun NavGraphBuilder.bottomNavGraph(
     navController: NavHostController,
     apiService: ApiService,
@@ -43,17 +48,22 @@ fun NavGraphBuilder.bottomNavGraph(
         composable<Screen.BottomNavScreens.Wallet> {
             val walletViewModel: WalletViewModel = viewModel(
                 factory = ViewModelFactory {
-                    val repository = HomeRepoImpl(apiService)
-                    WalletViewModel(repository)
+                    WalletViewModel(HomeRepoImpl(apiService))
+                }
+            )
+            val nftViewModel: NftViewModel = viewModel(
+                factory = ViewModelFactory {
+                    // NftViewModel(NftRepoImpl(apiService), WalletManager.address.orEmpty())
+                    NftViewModel(NftRepoImpl(apiService)) { WalletManager.address }
                 }
             )
             WalletScreen(
                 navController = navController,
                 viewModel = walletViewModel,
-                walletSharedViewModel
+                sharedViewModel = walletSharedViewModel,
+                nftViewModel = nftViewModel
             )
         }
-
 
         composable<Screen.BottomNavScreens.Learn> {
             LearnScreen(navController = navController, viewModel = viewModel<LearnViewModel>(), walletSharedViewModel)

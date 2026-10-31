@@ -27,6 +27,24 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Query
+import com.app.ezipaycoin.data.remote.dto.request.AddTokenRequest
+import com.app.ezipaycoin.data.remote.dto.request.StartLivenessRequest
+
+import com.app.ezipaycoin.data.remote.dto.response.KycStatusResponse
+import com.app.ezipaycoin.data.remote.dto.response.LivenessSessionResponse
+import com.app.ezipaycoin.data.remote.dto.response.TokenMetadataResponse
+import com.app.ezipaycoin.data.remote.dto.response.VideoJobStatusResponse
+import com.app.ezipaycoin.data.remote.dto.response.VideoUploadResponse
+import okhttp3.RequestBody
+import okhttp3.Response
+import retrofit2.http.Path
+
+import com.app.ezipaycoin.data.remote.dto.request.MintAllowlistRequest
+import com.app.ezipaycoin.data.remote.dto.request.MintRequest
+import com.app.ezipaycoin.data.remote.dto.response.NftCollectionResponse
+import com.app.ezipaycoin.data.remote.dto.response.NftHoldingsResponse
+import com.app.ezipaycoin.data.remote.dto.response.NftMintResponse
+import com.app.ezipaycoin.data.remote.dto.response.NftTokenResponse
 
 interface ApiService {
 
@@ -78,5 +96,89 @@ interface ApiService {
 
     @POST("CardTxn")
     suspend fun postDepositeViaCard(@Body request: DepositeViaCardRequest): DepositeByCardResponse
+
+    // ---------------------- KYC ----------------------
+
+    /**
+     * Multipart KYC submission. Parts:
+     *   - documentType, documentNumber  (text parts)
+     *   - frontImage, selfieImage       (required file parts)
+     *   - backImage                     (nullable file part for single-sided docs)
+     *
+     * Mirrors the existing ProfilePicUpload multipart style.
+     */
+    @Multipart
+    @POST("Kyc/submit")
+    suspend fun submitKyc(
+        @Part("fullName") fullName: RequestBody,
+        @Part("dateOfBirth") dateOfBirth: RequestBody,
+        @Part("nationality") nationality: RequestBody,
+        @Part("addressLine") addressLine: RequestBody,
+        @Part("city") city: RequestBody,
+        @Part("postalCode") postalCode: RequestBody,
+        @Part("country") country: RequestBody,
+        @Part("documentType") documentType: RequestBody,
+        @Part("documentNumber") documentNumber: RequestBody,
+        @Part("consentAccepted") consentAccepted: RequestBody,
+        @Part frontImage: MultipartBody.Part,
+        @Part selfieImage: MultipartBody.Part,
+        @Part backImage: MultipartBody.Part?,
+        @Part proofOfAddress: MultipartBody.Part?
+    ): BaseResponse<KycStatusResponse>
+
+    @GET("Kyc/status")
+    suspend fun getKycStatus(): BaseResponse<KycStatusResponse>
+
+    // ------------------- Add Custom Token -------------------
+
+    /** Auto-fetch: resolves on-chain metadata for a contract address (manual fallback in UI if this fails). */
+    @GET("Contract/ValidateToken")
+    suspend fun validateToken(
+        @Query("contractAddress") contractAddress: String,
+        @Query("chainId") chainId: Int
+    ): BaseResponse<TokenMetadataResponse>
+
+    @POST("Contract/AddToken")
+    suspend fun addToken(@Body request: AddTokenRequest): BaseResponse<TokenMetadataResponse>
+
+    @Multipart
+    @POST("Kyc/video/upload")
+    suspend fun uploadKycVideo(
+        @Part video: MultipartBody.Part,
+        @Part("kyc_id") kycId: okhttp3.RequestBody
+    ): VideoUploadResponse
+
+    @GET("Kyc/video/status/{jobId}")
+    suspend fun getVideoJobStatus(@Path("jobId") jobId: String): VideoJobStatusResponse
+
+    @POST("Kyc/liveness/session")
+    suspend fun startLivenessSession(
+        @Body body: StartLivenessRequest
+    ): LivenessSessionResponse
+
+    // ---------- NFT ----------
+
+    @GET("Nft/collection")
+    suspend fun getNftCollection(): BaseResponse<NftCollectionResponse>
+
+    @GET("Nft/holdings/{owner}")
+    suspend fun getNftHoldings(
+        @Path("owner") owner: String
+    ): BaseResponse<NftHoldingsResponse>
+
+    @GET("Nft/token/{tokenId}")
+    suspend fun getNftToken(
+        @Path("tokenId") tokenId: Long
+    ): BaseResponse<NftTokenResponse>
+
+    @POST("Nft/mint/public")
+    suspend fun mintNftPublic(
+        @Body request: MintRequest
+    ): BaseResponse<NftMintResponse>
+
+    @POST("Nft/mint/allowlist")
+    suspend fun mintNftAllowlist(
+        @Body request: MintAllowlistRequest
+    ): BaseResponse<NftMintResponse>
 
 }

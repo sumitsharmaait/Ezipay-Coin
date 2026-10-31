@@ -9,6 +9,7 @@ import androidx.navigation.navigation
 import androidx.navigation.toRoute
 import com.app.ezipaycoin.data.remote.api.ApiClient
 import com.app.ezipaycoin.data.remote.api.ApiService
+import com.app.ezipaycoin.data.remote.liveness.LivenessSocketClient
 import com.app.ezipaycoin.data.repository.AuthRepoImpl
 import com.app.ezipaycoin.data.repository.DepositWithdrawalRepoImpl
 import com.app.ezipaycoin.data.repository.TransactionRepoImpl
@@ -34,6 +35,21 @@ import com.app.ezipaycoin.presentation.withdraw.Withdraw
 import com.app.ezipaycoin.presentation.withdraw.WithdrawViewModel
 import com.app.ezipaycoin.utils.ViewModelFactory
 import kotlinx.serialization.json.Json
+
+import com.app.ezipaycoin.data.repository.KycRepoImpl
+import com.app.ezipaycoin.data.repository.KycVideoRepoImpl
+import com.app.ezipaycoin.data.repository.TokenRepoImpl
+import com.app.ezipaycoin.presentation.kyc.KycScreen
+import com.app.ezipaycoin.presentation.kyc.KycStatusScreen
+import com.app.ezipaycoin.presentation.kyc.KycViewModel
+import com.app.ezipaycoin.presentation.addtoken.AddCustomTokenScreen
+import com.app.ezipaycoin.presentation.addtoken.AddTokenViewModel
+
+import com.app.ezipaycoin.data.repository.NftRepoImpl
+import com.app.ezipaycoin.presentation.nft.NftDetailScreen
+import com.app.ezipaycoin.presentation.nft.mint.NftMintScreen
+import com.app.ezipaycoin.presentation.nft.mint.NftMintViewModel
+import com.app.ezipaycoin.presentation.nft.NftDetailViewModel
 
 fun NavGraphBuilder.appNavGraph(
     navController: NavController,
@@ -150,6 +166,88 @@ fun NavGraphBuilder.appNavGraph(
 
         composable<Screen.AppNavScreens.WalletDetails> {
             ViewWalletDetails(navController = navController, vm = viewModel<ViewWalletDetailsVM>())
+        }
+
+        composable<Screen.AppNavScreens.KycStatus> {
+            val kycViewModel: KycViewModel = viewModel(
+                factory = ViewModelFactory {
+                    val api = ApiClient.retrofit.create(ApiService::class.java)
+                    val repository = KycRepoImpl(api)
+                    val videoRepository = KycVideoRepoImpl(api)
+                    val socketClient = LivenessSocketClient(
+                        okhttp3.OkHttpClient.Builder()
+                            .readTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS) // keep socket open
+                            .build()
+                    )
+                    KycViewModel(repository, videoRepository, socketClient)
+                }
+            )
+            KycStatusScreen(
+                navController = navController,
+                viewModel = kycViewModel,
+                onStartVerification = { navController.navigate(Screen.AppNavScreens.KycUpload) }
+            )
+        }
+
+        composable<Screen.AppNavScreens.KycUpload> {
+            val kycViewModel: KycViewModel = viewModel(
+                factory = ViewModelFactory {
+                    val api = ApiClient.retrofit.create(ApiService::class.java)
+                    val repository = KycRepoImpl(api)
+                    val videoRepository = KycVideoRepoImpl(api)
+                    val socketClient = LivenessSocketClient(
+                        okhttp3.OkHttpClient.Builder()
+                            .readTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS) // keep socket open
+                            .build()
+                    )
+                    KycViewModel(repository, videoRepository, socketClient)
+                }
+            )
+            KycScreen(
+                navController = navController,
+                viewModel = kycViewModel,
+                onSubmitted = {
+                    navController.popBackStack(Screen.AppNavScreens.KycStatus, inclusive = false)
+                }
+            )
+        }
+
+        composable<Screen.AppNavScreens.AddToken> {
+            val addTokenViewModel: AddTokenViewModel = viewModel(
+                factory = ViewModelFactory {
+                    val api = ApiClient.retrofit.create(ApiService::class.java)
+                    val repository = TokenRepoImpl(api)
+                    AddTokenViewModel(repository)
+                }
+            )
+            AddCustomTokenScreen(
+                navController = navController,
+                viewModel = addTokenViewModel,
+                onTokenAdded = { navController.popBackStack() }
+            )
+        }
+
+        composable<Screen.AppNavScreens.NftDetail> { entry ->
+            val args = entry.toRoute<Screen.AppNavScreens.NftDetail>()
+            val vm: NftDetailViewModel = viewModel(
+                factory = ViewModelFactory { NftDetailViewModel(NftRepoImpl(apiService)) }
+            )
+            NftDetailScreen(
+                tokenId = args.tokenId,
+                viewModel = vm,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Screen.AppNavScreens.NftMint> {
+            val vm: NftMintViewModel = viewModel(
+                factory = ViewModelFactory { NftMintViewModel(NftRepoImpl(apiService)) }
+            )
+            NftMintScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onMinted = { navController.popBackStack() }
+            )
         }
 
     }
