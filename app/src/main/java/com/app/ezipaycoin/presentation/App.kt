@@ -30,7 +30,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        // Before anything builds a client: the chain chosen in Profile (debug and staging) applies from start-up.
+        // Before anything builds a client: the chain chosen in Profile (debug, staging and UAT) applies from start-up.
         com.app.ezipaycoin.config.ChainConfig.init(this)
         // Starts Firebase when this build has a config for its application id; otherwise push and social sign-in stay off.
         com.app.ezipaycoin.config.FirebaseAvailability.init(this)

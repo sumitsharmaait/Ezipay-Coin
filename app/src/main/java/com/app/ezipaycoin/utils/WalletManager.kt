@@ -88,7 +88,7 @@ object WalletManager {
     }
 
     // The chain of this process (config/ChainConfig.kt): the build type's chain, or the one picked
-    // in Profile on debug and staging builds.
+    // in Profile on debug, staging and UAT builds.
     val EZPT_TOKEN_CONTRACT: String get() = ChainConfig.current.ezptTokenContract
 
     val USDT_TOKEN_CONTRACT: String get() = ChainConfig.current.usdtTokenContract

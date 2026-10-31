@@ -17,7 +17,7 @@ data class ChainValues(
 }
 
 /**
- * The chain this process uses. Release builds always use the build's chain. Debug and staging
+ * The chain this process uses. Release builds always use the build's chain. Debug, staging and UAT
  * builds ([BuildConfig.CHAIN_SWITCHABLE]) can pick testnet or mainnet in Profile; the choice is
  * stored and applies from the next start, so every client built at start-up sees one chain.
  */

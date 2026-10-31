@@ -263,7 +263,7 @@ fun MyProfile(
                 if (Feature.PROFILE_PLACEHOLDERS in enabled) {
                     add(SettingItem(Icons.Filled.Close, "Twitter", "Pending") { })
                 }
-                // Debug and staging builds only: which chain the app signs for (applies after a restart).
+                // Debug, staging and UAT builds only: which chain the app signs for (applies after a restart).
                 if (ChainConfig.switchable) {
                     add(
                         SettingItem(Icons.Filled.SwapHoriz, "Network", ChainConfig.current.label) {

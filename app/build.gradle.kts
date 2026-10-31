@@ -12,7 +12,7 @@ plugins {
 }
 
 // The two BSC networks the app knows. Each build type picks one; every build also carries both
-// (TESTNET_* / MAINNET_*) so debug and staging can switch at runtime (config/ChainConfig.kt).
+// (TESTNET_* / MAINNET_*) so debug, staging and uat can switch at runtime (config/ChainConfig.kt).
 data class ChainSpec(
     val id: Long,
     val name: String,
@@ -76,14 +76,34 @@ fun hasFirebaseClient(buildType: String, applicationId: String): Boolean {
 fun gradleValue(name: String): String? =
     project.findProperty(name)?.toString()?.takeIf { it.isNotBlank() }
 
-// Staging: the staging server, BSC testnet unless -PstagingChain=mainnet.
-val stagingApiBaseUrl = gradleValue("stagingApiBaseUrl") ?: "http://18.142.108.53/api/v1/"
-val stagingChainName = (gradleValue("stagingChain") ?: "testnet").lowercase()
-val stagingChain = when (stagingChainName) {
-    "testnet" -> bscTestnet
-    "mainnet" -> bscMainnet
-    else -> throw GradleException("-PstagingChain must be testnet or mainnet, got '$stagingChainName'")
-}
+// Team builds: release-like build types (minified, not debuggable) that install next to
+// production under <applicationId>.<name>. Each reads -P<name>ApiBaseUrl and -P<name>Chain
+// (testnet, the default, or mainnet).
+class TeamBuild(
+    val name: String,
+    val title: String,
+    val apiBaseUrl: String,
+    /** True when no -P<name>ApiBaseUrl was given and the build borrows another server. */
+    val borrowsServer: Boolean,
+    val chain: ChainSpec,
+)
+
+fun teamChain(property: String): ChainSpec =
+    when (val value = (gradleValue(property) ?: "testnet").lowercase()) {
+        "testnet" -> bscTestnet
+        "mainnet" -> bscMainnet
+        else -> throw GradleException("-P$property must be testnet or mainnet, got '$value'")
+    }
+
+val stagingServerUrl = "http://18.142.108.53/api/v1/"
+val uatApiBaseUrl = gradleValue("uatApiBaseUrl")
+val teamBuilds = listOf(
+    // Staging: the staging server.
+    TeamBuild("staging", "Staging", gradleValue("stagingApiBaseUrl") ?: stagingServerUrl, false, teamChain("stagingChain")),
+    // UAT: user-acceptance testing before production. There is no UAT server yet, so it uses the
+    // staging server until uatApiBaseUrl is set.
+    TeamBuild("uat", "UAT", uatApiBaseUrl ?: stagingServerUrl, uatApiBaseUrl == null, teamChain("uatChain")),
+)
 val productionApiBaseUrl = gradleValue("productionApiBaseUrl") ?: "https://api.ezipaycoin.com/api/v1/"
 check(productionApiBaseUrl.startsWith("https://")) { "productionApiBaseUrl must be an https:// URL" }
 
@@ -103,7 +123,7 @@ android {
         }
         manifestPlaceholders["facebook_app_id"] = "833416492706197"
 
-        // Production endpoints and contracts (BSC mainnet). Debug, staging and sandbox override
+        // Production endpoints and contracts (BSC mainnet). Debug, staging, uat and sandbox override
         // them; release always ships these.
         buildConfigField("boolean", "SANDBOX", "false")
         buildConfigField("String", "API_BASE_URL", "\"https://api.ezipaycoin.com/api/v1/\"")
@@ -181,19 +201,20 @@ android {
             }
         }
 
-        // Staging: a release-like build (minified, not debuggable) for the team, installed next
-        // to production. Its server and chain come from -PstagingApiBaseUrl and -PstagingChain.
-        create("staging") {
-            initWith(getByName("release"))
-            applicationIdSuffix = ".staging"
-            versionNameSuffix = "-staging"
-            matchingFallbacks += listOf("release")
-            isDebuggable = false
-            buildConfigField("String", "API_BASE_URL", "\"$stagingApiBaseUrl\"")
-            chain(stagingChain)
-            buildConfigField("boolean", "CHAIN_SWITCHABLE", "true")
-            // The release key when it is configured; otherwise the debug key, so the APK still installs.
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+        // Staging and UAT (see TeamBuild above): release-like builds for the team.
+        teamBuilds.forEach { team ->
+            create(team.name) {
+                initWith(getByName("release"))
+                applicationIdSuffix = ".${team.name}"
+                versionNameSuffix = "-${team.name}"
+                matchingFallbacks += listOf("release")
+                isDebuggable = false
+                buildConfigField("String", "API_BASE_URL", "\"${team.apiBaseUrl}\"")
+                chain(team.chain)
+                buildConfigField("boolean", "CHAIN_SWITCHABLE", "true")
+                // The release key when it is configured; otherwise the debug key, so the APK still installs.
+                signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            }
         }
 
         // Local sandbox: a debug build wired to the zero-cost sandbox in ezipay-coin-platform
@@ -270,17 +291,23 @@ tasks.configureEach {
 
 fun hasReleaseSigningConfig(): Boolean = android.signingConfigs.findByName("release") != null
 
-// One line per build that actually runs a staging or Firebase-less variant, not on every build.
+// One line per build that actually runs a team or Firebase-less variant, not on every build.
 gradle.taskGraph.whenReady {
     val taskNames = allTasks.filter { it.project == project }.map { it.name }
     fun runs(variant: String) = taskNames.any { it.contains(variant.replaceFirstChar(Char::uppercaseChar)) }
-    if (runs("staging")) {
-        val other = if (stagingChain == bscTestnet) "mainnet" else "testnet"
+    teamBuilds.filter { runs(it.name) }.forEach { team ->
+        val other = if (team.chain == bscTestnet) "mainnet" else "testnet"
         logger.lifecycle(
-            "Staging build targets ${stagingChain.name.uppercase()} (${stagingChain.id}) at $stagingApiBaseUrl - pass -PstagingChain=$other to switch"
+            "${team.title} build targets ${team.chain.name.uppercase()} (${team.chain.id}) at ${team.apiBaseUrl} - pass -P${team.name}Chain=$other to switch"
         )
+        if (team.borrowsServer) {
+            logger.lifecycle(
+                "${team.title} has no server of its own yet: using the staging server ${team.apiBaseUrl}. " +
+                    "Set -P${team.name}ApiBaseUrl=... (or ${team.name}ApiBaseUrl in ~/.gradle/gradle.properties) once a ${team.title} server exists."
+            )
+        }
         if (!hasReleaseSigningConfig()) {
-            logger.lifecycle("Staging is signed with the debug key (no EZIPAY_RELEASE_* values): fine for team installs, not for Play uploads.")
+            logger.lifecycle("${team.title} is signed with the debug key (no EZIPAY_RELEASE_* values): fine for team installs, not for Play uploads.")
         }
     }
     firebaseOffVariants.forEach { (variant, applicationId) ->
@@ -291,7 +318,7 @@ gradle.taskGraph.whenReady {
 }
 
 // Guard against shipping the wrong chain: release is mainnet only, debug is never mainnet by
-// default, staging is testnet or mainnet. Only debug and staging may switch chain at runtime.
+// default, staging and uat are testnet or mainnet. Only debug, staging and uat may switch chain at runtime.
 // (The sandbox build type has its own check where it is defined.)
 afterEvaluate {
     fun fieldOf(buildType: String, field: String): String? =
@@ -299,7 +326,9 @@ afterEvaluate {
     fun chainOf(name: String): Long? = fieldOf(name, "CHAIN_ID")?.removeSuffix("L")?.toLong()
     check(chainOf("release") == 56L) { "release must use chain 56, found ${chainOf("release")}" }
     check(chainOf("debug") != 56L) { "debug must not use chain 56" }
-    check(chainOf("staging") in setOf(56L, 97L)) { "staging must use chain 97 or 56, found ${chainOf("staging")}" }
+    teamBuilds.forEach { team ->
+        check(chainOf(team.name) in setOf(56L, 97L)) { "${team.name} must use chain 97 or 56, found ${chainOf(team.name)}" }
+    }
     check(fieldOf("release", "CHAIN_SWITCHABLE") == "false") { "release must not switch chain at runtime" }
 }
 

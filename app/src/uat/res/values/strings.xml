@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher name of the UAT build, so it is told apart from staging and production on one device. -->
+    <string name="app_name">Ezipay Coin UAT</string>
+</resources>

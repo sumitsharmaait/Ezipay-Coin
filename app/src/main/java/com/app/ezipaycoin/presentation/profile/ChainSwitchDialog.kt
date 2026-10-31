@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.app.ezipaycoin.config.ChainConfig
 
 /**
- * Debug and staging builds only (ChainConfig.switchable): picks the chain for the next start.
+ * Debug, staging and UAT builds only (ChainConfig.switchable): picks the chain for the next start.
  * [onRestart] is called after a different chain has been stored.
  */
 @Composable
