@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,10 +48,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.app.ezipaycoin.config.ChainConfig
 import com.app.ezipaycoin.config.Feature
 import com.app.ezipaycoin.config.FeatureFlags
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,6 +96,7 @@ fun MyProfile(
 
     val state by viewModel.uiState.collectAsState()
     val context: Context = LocalContext.current
+    var showChainDialog by remember { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -257,6 +263,14 @@ fun MyProfile(
                 if (Feature.PROFILE_PLACEHOLDERS in enabled) {
                     add(SettingItem(Icons.Filled.Close, "Twitter", "Pending") { })
                 }
+                // Debug and staging builds only: which chain the app signs for (applies after a restart).
+                if (ChainConfig.switchable) {
+                    add(
+                        SettingItem(Icons.Filled.SwapHoriz, "Network", ChainConfig.current.label) {
+                            showChainDialog = true
+                        }
+                    )
+                }
                 if (FeatureFlags.developerModeAvailable) {
                     add(
                         SettingItem(
@@ -296,6 +310,21 @@ fun MyProfile(
                     .padding(bottom = 20.dp, top = 8.dp)
             )
 
+        }
+        if (showChainDialog) {
+            ChainSwitchDialog(
+                onDismiss = { showChainDialog = false },
+                onRestart = {
+                    showChainDialog = false
+                    val intent = Intent(context, MainActivity::class.java).addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    )
+                    context.startActivity(intent)
+                    (context as? Activity)?.finish()
+                    // A new process, so every client is built for the chosen chain.
+                    Runtime.getRuntime().exit(0)
+                }
+            )
         }
         if (state.logoutResponseState is ResponseState.Loading) {
             Box(
