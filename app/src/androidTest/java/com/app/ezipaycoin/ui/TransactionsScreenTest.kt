@@ -25,14 +25,14 @@ class TransactionsScreenTest : ScreenTest() {
     private fun open() {
         val vm = onMain { AllTransactionsViewModel(repo) }
         show { TransactionScreen(rememberNavController(), vm) { clicked = it } }
-        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTextCount("-12.5000") > 0 }
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTextCount("-12.5000 EZPT") > 0 }
     }
 
     @Test
     fun listsEachTransactionWithSignedAmount() {
         open()
-        composeRule.onNodeWithText("-12.5000").assertIsDisplayed()
-        composeRule.onNodeWithText("+0.1000").assertIsDisplayed()
+        composeRule.onNodeWithText("-12.5000 EZPT").assertIsDisplayed()
+        composeRule.onNodeWithText("+0.1000 EZPT").assertIsDisplayed()
         // Both rows show the other side of the transfer: the recipient of the sent one, the sender of the received one.
         composeRule.onAllNodesWithText("0xfB691...5d359").assertCountEquals(2)
         composeRule.onAllNodesWithText("October 1, 2026 | 10:15AM").assertCountEquals(2)
@@ -57,7 +57,7 @@ class TransactionsScreenTest : ScreenTest() {
     @Test
     fun tappingARowReportsTheTransaction() {
         open()
-        composeRule.onNodeWithText("-12.5000").performClick()
+        composeRule.onNodeWithText("-12.5000 EZPT").performClick()
         composeRule.waitUntil(5_000) { clicked != null }
         assertEquals("1", clicked?.id)
     }
