@@ -396,6 +396,8 @@ private fun HomeSuccessData(
             .padding(horizontal = HomeDimens.ScreenPadding, vertical = HomeDimens.ScreenPadding)
             .verticalScroll(rememberScrollState())
     ) {
+        HomeBanners(navController)
+
         Spacer(modifier = Modifier.height(20.dp))
 
         BalanceCard(

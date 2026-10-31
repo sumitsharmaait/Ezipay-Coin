@@ -2,6 +2,7 @@ package com.app.ezipaycoin.config
 
 import android.content.Context
 import com.app.ezipaycoin.BuildConfig
+import com.app.ezipaycoin.data.remote.dto.response.AppBanner
 import com.app.ezipaycoin.domain.repository.AppConfigRepository
 import com.app.ezipaycoin.utils.ResponseState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,10 @@ object FeatureFlags {
 
     private val _enabled = MutableStateFlow(FeatureResolver.defaults(developerMode = false))
     val enabled: StateFlow<Set<Feature>> = _enabled.asStateFlow()
+
+    private val _banners = MutableStateFlow<List<AppBanner>>(emptyList())
+    /** Banners from the last App/config answer; empty until one arrives. */
+    val banners: StateFlow<List<AppBanner>> = _banners.asStateFlow()
 
     private val _developerMode = MutableStateFlow(false)
     val developerMode: StateFlow<Boolean> = _developerMode.asStateFlow()
@@ -50,6 +55,7 @@ object FeatureFlags {
         val result = repository.getAppConfig()
         if (result !is ResponseState.Success) return false
         remote = result.data.features
+        _banners.value = result.data.banners.orEmpty()
         recompute()
         return true
     }
