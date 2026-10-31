@@ -55,7 +55,7 @@ Unit tests, by area:
 - **Dashboard refresh** (`WalletSharedViewModelTest`): load at unlock, resume throttle, push refresh, pull to refresh,
   last good data kept on failure.
 - **Profile** (`MyProfileViewModelTest`, `ProfileMergeTest`): Users/me, cache fallback, rename, logout, picture upload.
-- **History** (`AllTransactionsViewModelTest`): paging and filter behaviour, including two pinned defects.
+- **History** (`AllTransactionsViewModelTest`): paging, filter and retry behaviour.
 - **HTTP** (`RepositoryApiTest`): each repository against `MockWebServer`; request line, headers (Bearer), body and
   envelope parsing, `apiStatus=false`, `FEATURE_DISABLED`, 401, and the JSON-RPC calls to the node.
 - **Contract** (`ApiContractTest`): every route in `ApiService` must exist in the backend baseline copy at
@@ -81,8 +81,8 @@ Instrumented tests:
   real library goes in `androidTest`.
 - Golden JSON lives in `app/src/test/resources/golden`. Shapes follow the recordings in
   `ezipay-coin-platform/contracts/golden`; keep them short and free of real addresses, tokens and keys.
-- Tests that pin a defect are named `*KnownIssue*` and carry a comment saying what the fixed behaviour should be.
-  When the defect is fixed the test is changed on purpose, not deleted.
+- A test that pins a known defect says so in its name and comment. When the defect is fixed the test is
+  flipped on purpose, not deleted.
 - `ApiContractTest.KNOWN_GAPS` lists routes the app calls that the backend baseline lacks, each with a reason.
   A new route that is in neither place fails the build. Remove an entry when its gap closes.
 - Refresh the baseline copy by re-copying the route column from the backend's `contract-baseline.txt`.
@@ -94,9 +94,22 @@ New view model: inject its repository through the constructor, build it in a tes
 `uiState.value` after `runCurrent()`. New endpoint: add a golden file and a case in `RepositoryApiTest`; the
 contract test picks up the route automatically. New screen: add a `ScreenTest` subclass in `androidTest/.../ui`.
 
+## Running on the emulator
+
+`connectedDebugAndroidTest` needs a booted emulator. Start the AVD on its own port so it never collides with
+another emulator, wait for `sys.boot_completed`, pass `ANDROID_SERIAL`, and shut it down afterwards with
+`adb -s <serial> emu kill`:
+
+```bash
+emulator -avd EziPay_E2E -port 5558 -no-snapshot-save -no-audio -no-window &
+ANDROID_SERIAL=emulator-5558 ./gradlew connectedDebugAndroidTest
+adb -s emulator-5558 emu kill
+```
+
+Espresso 3.7 or newer is required for API 36+ images (older versions fail with `InputManager.getInstance`).
+
 ## Known limits
 
-- The refresh throttles in `WalletSharedViewModel` read the system clock, so tests only check "a second call right
-  away is throttled". Checking that the window expires needs a clock parameter on the view model.
-- The signing step of the token path cannot run on the JVM (`AnyAddress` is native); it is covered on a device by
-  `PaymentSigningTest`.
+- Screen tests replace the content of `MainActivity` with the screen under test; the app's own content is
+  composed first and discarded.
+- Compose screens are exercised only on a device, so JVM coverage for `presentation.*` screens is low by design.
