@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferences
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.domain.repository.AuthRepository
+import com.app.ezipaycoin.utils.PasswordCredentials
 import com.app.ezipaycoin.utils.PasswordGate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.app.ezipaycoin.utils.SessionManager
 import com.app.ezipaycoin.utils.WalletManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +30,10 @@ class DeleteAccountViewModel(repository: AuthRepository) : ViewModel() {
     private val store = UserPreferencesRepository.userPreferencesFlow
 
     private val deletion = AccountDeletion(
-        storedPassword = { store.data.first().password },
+        passwordMatches = { entered ->
+            val prefs = store.data.first()
+            withContext(Dispatchers.Default) { PasswordCredentials.matches(prefs, entered) }
+        },
         gate = PasswordGate(),
         deleteRemote = { key -> repository.deleteAccount(key) },
         wipeLocal = {

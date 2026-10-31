@@ -41,6 +41,12 @@ class WalletSetupVM(private val repository: AuthRepository) : ViewModel() {
                 getNonce(wallet, event.name, event.email, event.profilePic)
             }
 
+            is WalletSetupEvent.SocialDetailsUnavailable -> {
+                _uiState.update {
+                    it.copy(responseState = ResponseState.Error(event.message))
+                }
+            }
+
             is WalletSetupEvent.DismissDialog -> {
                 _uiState.update {
                     it.copy(responseState = ResponseState.Idle)

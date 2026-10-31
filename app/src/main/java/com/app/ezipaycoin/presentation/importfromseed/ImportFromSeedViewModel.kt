@@ -1,11 +1,17 @@
 package com.app.ezipaycoin.presentation.importfromseed
 
 import androidx.lifecycle.ViewModel
+import com.app.ezipaycoin.utils.PasswordVerifier
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.domain.repository.AuthRepository
 import com.app.ezipaycoin.utils.ResponseState
+import com.app.ezipaycoin.utils.SeedPhraseRules
+import com.app.ezipaycoin.utils.SessionManager
+import com.app.ezipaycoin.utils.WalletSignIn
 import com.app.ezipaycoin.utils.WalletManager
 import com.app.ezipaycoin.utils.WalletManager.signNonceWithTrustWalletCore
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -17,7 +23,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import wallet.core.jni.CoinType
 import wallet.core.jni.HDWallet
-import java.security.InvalidParameterException
 
 class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewModel() {
 
@@ -77,9 +82,10 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
             ImportFromSeedEvent.ImportBtnClick -> {
                 if (validateForm()) {
                     try {
-                        val wallet = WalletManager.importWallet(_uiState.value.seedPhrase.trim())
+                        val phrase = (SeedPhraseRules.check(_uiState.value.seedPhrase) as SeedPhraseRules.Result.Ok).normalized
+                        val wallet = WalletManager.importWallet(phrase)
                         getNonce(wallet)
-                    } catch (ex: InvalidParameterException) {
+                    } catch (ex: Exception) {
                         _uiState.update {
                             it.copy(seedPhraseError = "Invalid seed phrase")
                         }
@@ -101,19 +107,22 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
             try {
                 val privateKey = wallet.getKeyForCoin(CoinType.ETHEREUM)
                 val address = CoinType.ETHEREUM.deriveAddress(privateKey)
-                val res = repository.getNonce(address)
-                if (res.apiStatus) {
-                    val signatureHex = signNonceWithTrustWalletCore(res.apiData.nonce, privateKey)
-                    val loginRes = repository.postLogin(LoginRequest(address, signatureHex, "2"))
-                    if (loginRes.apiStatus) {
+                val result = WalletSignIn(repository).run(address, "2") { nonce ->
+                    signNonceWithTrustWalletCore(nonce, privateKey)
+                }
+                when (result) {
+                    is WalletSignIn.Result.Success -> {
+                        val loginRes = result.login
+                        val verifier = withContext(Dispatchers.Default) { PasswordVerifier.create(_uiState.value.newPassword) }
                         dataStore.updateData {
                             it.copy(
                                 isWalletCreated = true,
-                                password = _uiState.value.newPassword,
+                                passwordVerifier = verifier,
+                                password = null,
                                 walletAddress = address,
                                 walletPrivateKey = privateKey.data()
                                     .toHexString(format = HexFormat.Default),
-                                nonce = res.apiData.nonce,
+                                nonce = result.nonce,
                                 token = loginRes.apiData.token,
                                 userName = loginRes.apiData.user.name,
                                 userEmail = loginRes.apiData.user.email,
@@ -121,21 +130,13 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
                                 seedPhrase = wallet.mnemonic()
                             )
                         }
-                        _uiState.update {
-                            it.copy(
-                                responseState = ResponseState.Success(res)
-                            )
-                        }
+                        SessionManager.token = loginRes.apiData.token
+                        _uiState.update { it.copy(responseState = ResponseState.Success(loginRes)) }
                         _eventFlow.emit(ImportFromSeedVMEvent.MoveToSuccess)
                     }
 
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            responseState = ResponseState.Error(
-                                res.apiMessage
-                            )
-                        )
+                    is WalletSignIn.Result.Failed -> _uiState.update {
+                        it.copy(responseState = ResponseState.Error(result.message))
                     }
                 }
             } catch (e: Exception) {
@@ -159,28 +160,22 @@ class ImportFromSeedViewModel(private val repository: AuthRepository) : ViewMode
                 confirmPasswordError = ""
             )
         }
-        if (_uiState.value.seedPhrase.isBlank()) {
+        val phraseCheck = SeedPhraseRules.check(_uiState.value.seedPhrase)
+        if (phraseCheck !is SeedPhraseRules.Result.Ok) {
             _uiState.update {
-                it.copy(seedPhraseError = "Please Enter seed phrases")
+                it.copy(seedPhraseError = SeedPhraseRules.message(phraseCheck))
             }
             return false
         }
 
-        if (_uiState.value.seedPhrase.trim().split(" ").size != 12) {
-            _uiState.update {
-                it.copy(seedPhraseError = "Seed words are not correct")
-            }
-            return false
-        }
-
-        if (_uiState.value.newPassword.isBlank() && _uiState.value.newPassword.length < 8) {
+        if (_uiState.value.newPassword.length < 8) {
             _uiState.update {
                 it.copy(newPasswordError = "Must be at least 8 characters")
             }
             return false
         }
 
-        if (_uiState.value.confirmPassword.isBlank() && _uiState.value.confirmPassword.length < 8) {
+        if (_uiState.value.confirmPassword.length < 8) {
             _uiState.update {
                 it.copy(confirmPasswordError = "Must be at least 8 characters")
             }

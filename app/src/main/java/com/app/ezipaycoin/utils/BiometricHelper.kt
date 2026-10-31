@@ -48,7 +48,7 @@ object BiometricHelper {
                 }
 
                 override fun onAuthenticationFailed() {
-                    onFailure()
+                    // A single non-matching attempt: the prompt stays open and the user can retry.
                 }
             }
         )

@@ -38,10 +38,9 @@ sealed class Screen(val route: String) {
         @Serializable
         data object Unlock
 
+        /** The phrase to confirm is read from [com.app.ezipaycoin.utils.SeedHolder], not from route arguments. */
         @Serializable
-        data class SeedPhraseVerify(
-            val phrases: List<String>
-        )
+        data object SeedPhraseVerify
     }
 
     @Serializable

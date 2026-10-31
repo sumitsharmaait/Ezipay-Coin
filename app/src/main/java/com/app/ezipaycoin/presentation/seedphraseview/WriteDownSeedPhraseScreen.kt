@@ -53,6 +53,7 @@ import com.app.ezipaycoin.ui.composables.TopAppBarWithProgressIndicator
 import com.app.ezipaycoin.ui.theme.AppBackgroundColor
 import com.app.ezipaycoin.ui.theme.TextHintColor
 import com.app.ezipaycoin.ui.theme.TextPrimaryColor
+import com.app.ezipaycoin.utils.SeedHolder
 import com.app.ezipaycoin.ui.theme.greyButtonBackground
 import com.app.ezipaycoin.ui.theme.grey_18
 import com.app.ezipaycoin.ui.theme.grey_22
@@ -78,7 +79,10 @@ fun WriteDownSeedPhraseScreen(
             if (state.isViewed) {
                 GoldGradientButton(
                     "Proceed to Confirm",
-                    onClick = { navController.navigate(Screen.Auth.SeedPhraseVerify(state.seedWords)) },
+                    onClick = {
+                        SeedHolder.set(state.seedWords)
+                        navController.navigate(Screen.Auth.SeedPhraseVerify)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 20.dp, end = 20.dp, bottom = 32.dp, top = 8.dp)

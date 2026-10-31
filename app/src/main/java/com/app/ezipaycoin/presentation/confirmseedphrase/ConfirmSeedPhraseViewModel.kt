@@ -6,7 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.domain.repository.AuthRepository
+import com.app.ezipaycoin.utils.FcmToken
 import com.app.ezipaycoin.utils.ResponseState
+import com.app.ezipaycoin.utils.SeedHolder
+import com.app.ezipaycoin.utils.SessionManager
+import com.app.ezipaycoin.utils.WalletSignIn
 import com.app.ezipaycoin.utils.SnackbarController
 import com.app.ezipaycoin.utils.SnackbarEvent
 import com.app.ezipaycoin.utils.WalletManager
@@ -72,6 +76,18 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
     }
 
 
+    /** Tries the sign-in again after a failure; the wallet is still only in memory. */
+    fun retry() {
+        if (_uiState.value.responseState is ResponseState.Loading || !WalletManager.isInitialized()) return
+        val privateKey = WalletManager.wallet.getKeyForCoin(CoinType.ETHEREUM)
+        getNonce(CoinType.ETHEREUM.deriveAddress(privateKey), privateKey)
+    }
+
+    override fun onCleared() {
+        SeedHolder.clear()
+        super.onCleared()
+    }
+
     @OptIn(ExperimentalStdlibApi::class)
     private fun getNonce(publicKey: String, privateKey: PrivateKey) {
         viewModelScope.launch {
@@ -82,18 +98,12 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
                 )
             }
             try {
-                var token = ""
-                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        token = task.result
-                    }
+                val result = WalletSignIn(repository).run(publicKey, FcmToken.fetch()) { nonce ->
+                    signNonceWithTrustWalletCore(nonce, privateKey)
                 }
-                val res = repository.getNonce(publicKey)
-                if (res.apiStatus) {
-                    val signatureHex = signNonceWithTrustWalletCore(res.apiData.nonce, privateKey)
-                    val loginRes =
-                        repository.postLogin(LoginRequest(publicKey, signatureHex, token))
-                    if (loginRes.apiStatus) {
+                when (result) {
+                    is WalletSignIn.Result.Success -> {
+                        val loginRes = result.login
                         val dataStore = UserPreferencesRepository.userPreferencesFlow
                         dataStore.updateData {
                             it.copy(
@@ -101,7 +111,7 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
                                 walletAddress = publicKey,
                                 walletPrivateKey = privateKey.data()
                                     .toHexString(format = HexFormat.Default),
-                                nonce = res.apiData.nonce,
+                                nonce = result.nonce,
                                 token = loginRes.apiData.token,
                                 userName = loginRes.apiData.user.name,
                                 userEmail = loginRes.apiData.user.email,
@@ -109,23 +119,19 @@ class ConfirmSeedPhraseViewModel(private val repository: AuthRepository) : ViewM
                                 seedPhrase = originalSeeds.joinToString(separator = " ")
                             )
                         }
-
+                        SessionManager.token = loginRes.apiData.token
                         WalletManager.pendingProfilePic = null
+                        SeedHolder.clear()
                         _uiState.update {
                             it.copy(
                                 isAllConfirmed = true,
-                                responseState = ResponseState.Success(res)
+                                responseState = ResponseState.Success(loginRes)
                             )
                         }
                     }
 
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            responseState = ResponseState.Error(
-                                res.apiMessage
-                            )
-                        )
+                    is WalletSignIn.Result.Failed -> _uiState.update {
+                        it.copy(isAllConfirmed = true, responseState = ResponseState.Error(result.message))
                     }
                 }
             } catch (e: Exception) {

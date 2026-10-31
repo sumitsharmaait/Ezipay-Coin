@@ -24,7 +24,7 @@ class AccountDeletionTest {
         remote: suspend (String) -> BaseResponse<String?>,
         gate: PasswordGate = PasswordGate(maxAttempts = 3)
     ) = AccountDeletion(
-        storedPassword = { "pw123456" },
+        passwordMatches = { it == "pw123456" },
         gate = gate,
         deleteRemote = { k -> keys += k; remote(k) },
         wipeLocal = { wiped++ },

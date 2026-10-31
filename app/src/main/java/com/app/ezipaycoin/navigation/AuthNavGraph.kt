@@ -5,7 +5,9 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import androidx.navigation.toRoute
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import com.app.ezipaycoin.utils.SeedHolder
 import com.app.ezipaycoin.data.remote.api.ApiClient
 import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.repository.AuthRepoImpl
@@ -83,7 +85,12 @@ fun NavGraphBuilder.authNavGraph(
             WriteDownSeedPhraseScreen(navController = navController, viewSeedPhraseViewModel)
         }
         composable<Screen.Auth.SeedPhraseVerify> { backStackEntry ->
-            val seeds = backStackEntry.toRoute<Screen.Auth.SeedPhraseVerify>()
+            val seeds = remember { SeedHolder.peek() }
+            if (seeds.isEmpty()) {
+                // The phrase is only kept in memory; if it is gone (process restart) go back to it.
+                LaunchedEffect(Unit) { navController.popBackStack() }
+                return@composable
+            }
             val confirmSeedPhraseViewModel: ConfirmSeedPhraseViewModel = viewModel(
                 factory = ViewModelFactory {
                     ConfirmSeedPhraseViewModel(repository)
@@ -91,7 +98,7 @@ fun NavGraphBuilder.authNavGraph(
             )
             ConfirmSeedPhraseScreen(
                 navController = navController,
-                originalSeeds = seeds.phrases,
+                originalSeeds = seeds,
                 confirmSeedPhraseViewModel
             )
         }

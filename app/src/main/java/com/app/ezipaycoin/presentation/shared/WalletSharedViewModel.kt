@@ -58,6 +58,10 @@ class WalletSharedViewModel(
                 getDashboard()
             }
 
+            is SharedEvent.AppLocked -> {
+                _uiState.update { it.copy(isUnlocked = false) }
+            }
+
             is SharedEvent.OpenUrl -> {
                 viewModelScope.launch {
                     _eventFlow.emit(SharedEvent.OpenUrl(event.url))
