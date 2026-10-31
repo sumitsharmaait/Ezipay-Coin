@@ -46,7 +46,7 @@ On a machine with little memory, add `--max-workers=2`.
 |---|---|---|---|---|
 | Application id | `com.app.ezipaycoin.debug` once a Firebase config lists it, otherwise `com.app.ezipaycoin` | `com.app.ezipaycoin.staging` | `com.app.ezipaycoin.uat` | `com.app.ezipaycoin` |
 | App name on the launcher | Ezipay Coin | **Ezipay Coin Staging** (orange icon background) | **Ezipay Coin UAT** (purple icon background) | Ezipay Coin |
-| Server (`API_BASE_URL`) | `http://10.0.2.2:5009/api/v1/` (override `-PapiBaseUrl=...`) | `http://18.142.108.53/api/v1/` (override `-PstagingApiBaseUrl=...`) | `-PuatApiBaseUrl=...`; **until it is set, the staging server** `http://18.142.108.53/api/v1/` | `https://api.ezipaycoin.com/api/v1/` (override `-PproductionApiBaseUrl=https://...`) |
+| Server (`API_BASE_URL`) | `http://10.0.2.2:5009/api/v1/` (override `-PapiBaseUrl=...`) | `http://18.142.108.53/api/v1/` (override `-PstagingApiBaseUrl=...`) | `-PuatApiBaseUrl=...`; **until it is set, the staging server** `http://18.142.108.53/api/v1/` | `https://api.ezipaycoin.com/api/v1/` (override `-PproductionApiBaseUrl=https://...`; the build warns, never upload such a build) |
 | Chain | BSC Testnet (97) | **BSC Testnet (97) by default**; `-PstagingChain=mainnet` for BSC Mainnet (56) | **BSC Testnet (97) by default**; `-PuatChain=mainnet` for BSC Mainnet (56) | BSC Mainnet (56) only |
 | In-app network switch | Yes (Profile > Network) | Yes (Profile > Network) | Yes (Profile > Network) | No |
 | Cleartext HTTP | `10.0.2.2`, `127.0.0.1`, `18.142.108.53` | `18.142.108.53` only | `18.142.108.53` only | None (HTTPS only) |
