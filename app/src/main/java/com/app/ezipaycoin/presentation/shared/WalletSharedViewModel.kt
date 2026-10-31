@@ -20,7 +20,8 @@ import kotlinx.coroutines.launch
 
 class WalletSharedViewModel(
     private val homeRepository: HomeRepository,
-    private val dataRepository: UserDataRepository
+    private val dataRepository: UserDataRepository,
+    clock: () -> Long = System::currentTimeMillis
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SharedState())
@@ -30,8 +31,8 @@ class WalletSharedViewModel(
     val eventFlow = _eventFlow.asSharedFlow()
 
     // Background refreshes (resume, push) are limited so quick tab or app switches do not hammer the API.
-    private val resumeThrottle = RefreshThrottle(RESUME_REFRESH_MS)
-    private val pushThrottle = RefreshThrottle(PUSH_REFRESH_MS)
+    private val resumeThrottle = RefreshThrottle(RESUME_REFRESH_MS, clock)
+    private val pushThrottle = RefreshThrottle(PUSH_REFRESH_MS, clock)
 
     fun onEvent(event: SharedEvent) {
         when (event) {
