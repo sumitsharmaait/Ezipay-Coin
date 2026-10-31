@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     id("com.google.gms.google-services")
     alias(libs.plugins.kotlin.compose)
+    jacoco
 }
 
 android {
@@ -55,6 +56,7 @@ android {
         }
 
         debug {
+            enableUnitTestCoverage = true
             // The .NET API running on this machine (port 5009; 5000 is taken by the macOS AirPlay receiver).
             // 10.0.2.2 is how the Android emulator reaches the host. For a USB device run
             // `adb reverse tcp:5009 tcp:5009` and build with -PapiBaseUrl=http://127.0.0.1:5009/api/v1/.
@@ -117,6 +119,12 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    testOptions {
+        unitTests {
+            // android.util.Log and friends return defaults instead of throwing in JVM tests.
+            isReturnDefaultValues = true
+        }
     }
     packaging {
         resources {
@@ -184,16 +192,49 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-//    androidTestImplementation(libs.androidx.junit)
-//    androidTestImplementation(libs.androidx.espresso.core)
-//    androidTestImplementation(platform(libs.androidx.compose.bom))
-//    androidTestImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+    testImplementation(libs.okhttp.mockwebserver)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
-//    debugImplementation(libs.androidx.ui.test.manifest)
+    debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation("androidx.camera:camera-core:1.3.4")
     implementation("androidx.camera:camera-camera2:1.3.4")
     implementation("androidx.camera:camera-lifecycle:1.3.4")
     implementation("androidx.camera:camera-view:1.3.4")
 
+}
+
+jacoco {
+    toolVersion = libs.versions.jacoco.get()
+}
+
+// Coverage for debug unit tests: XML (for scripts/test-report.sh) and HTML (for people).
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+    group = "verification"
+    description = "Coverage report for the debug unit tests."
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    val excluded = listOf(
+        "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+        "**/*ComposableSingletons*.*", "**/*\$\$inlined*.*", "**/*Kt\$*lambda*.*"
+    )
+    classDirectories.setFrom(
+        fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) { exclude(excluded) }
+    )
+    sourceDirectories.setFrom(files("src/main/java"))
+    executionData.setFrom(
+        fileTree(layout.buildDirectory) { include("outputs/unit_test_code_coverage/debugUnitTest/*.exec", "jacoco/testDebugUnitTest.exec") }
+    )
 }
