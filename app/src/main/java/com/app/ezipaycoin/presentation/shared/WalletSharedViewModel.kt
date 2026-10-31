@@ -7,6 +7,8 @@ import com.app.ezipaycoin.domain.repository.HomeRepository
 import com.app.ezipaycoin.domain.repository.UserDataRepository
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SessionManager
+import com.app.ezipaycoin.utils.validation.RefreshThrottle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,9 +29,22 @@ class WalletSharedViewModel(
     private val _eventFlow = MutableSharedFlow<SharedEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
+    // Background refreshes (resume, push) are limited so quick tab or app switches do not hammer the API.
+    private val resumeThrottle = RefreshThrottle(RESUME_REFRESH_MS)
+    private val pushThrottle = RefreshThrottle(PUSH_REFRESH_MS)
+
     fun onEvent(event: SharedEvent) {
         when (event) {
             is SharedEvent.FetchBalance -> getDashboard()
+            is SharedEvent.RefreshIfStale -> {
+                if (_uiState.value.isUnlocked && resumeThrottle.tryAcquire()) getDashboard(silent = true)
+            }
+            is SharedEvent.PullRefresh -> {
+                if (_uiState.value.isUnlocked) {
+                    resumeThrottle.tryAcquire(force = true)
+                    getDashboard(silent = true, pulled = true)
+                }
+            }
             is SharedEvent.CryptoOptionChanged -> {
                 _uiState.update {
                     it.copy(selectedCrypto = event.crypto)
@@ -58,7 +73,14 @@ class WalletSharedViewModel(
     }
 
     init {
-        //observeWalletState()
+        viewModelScope.launch {
+            SessionManager.transferEvents.collect {
+                if (_uiState.value.isUnlocked && pushThrottle.tryAcquire()) {
+                    resumeThrottle.tryAcquire(force = true)
+                    getDashboard(silent = true)
+                }
+            }
+        }
     }
 
 //    private fun observeWalletState() {
@@ -76,15 +98,22 @@ class WalletSharedViewModel(
 //        }
 //    }
 
-    private fun getDashboard() {
+    /**
+     * [silent] refreshes keep the current screen: no full-screen loader, and a failure leaves the
+     * last good data in place. [pulled] drives the pull-to-refresh indicator.
+     */
+    private fun getDashboard(silent: Boolean = false, pulled: Boolean = false) {
         viewModelScope.launch {
             val prefs = UserPreferencesRepository.userPreferencesFlow.data.first()
             SessionManager.token = prefs.token
 
+            val hasData = _uiState.value.dashboardResponse != null
             _uiState.update {
-                it.copy(
-                    responseState = ResponseState.Loading,
-                )
+                if (silent && hasData) {
+                    it.copy(isRefreshing = pulled)
+                } else {
+                    it.copy(responseState = ResponseState.Loading, isRefreshing = pulled)
+                }
             }
             try {
                 val res = homeRepository.getDashboard()
@@ -99,24 +128,24 @@ class WalletSharedViewModel(
                         it.copy(
                             responseState = ResponseState.Success(res),
                             selectedCrypto = crypto,
-                            dashboardResponse = res.apiData
+                            dashboardResponse = res.apiData,
+                            isRefreshing = false
                         )
                     }
                 } else {
                     _uiState.update {
-                        it.copy(
-                            responseState = ResponseState.Error(
-                                res.apiMessage
-                            )
-                        )
+                        if (silent && hasData) it.copy(isRefreshing = false)
+                        else it.copy(responseState = ResponseState.Error(res.apiMessage), isRefreshing = false)
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(
-                        responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
-                        )
+                    if (silent && hasData) it.copy(isRefreshing = false)
+                    else it.copy(
+                        responseState = ResponseState.Error(e.localizedMessage ?: "Unknown error"),
+                        isRefreshing = false
                     )
                 }
             }
@@ -146,4 +175,9 @@ class WalletSharedViewModel(
         }
     }
 
+
+    private companion object {
+        const val RESUME_REFRESH_MS = 10_000L
+        const val PUSH_REFRESH_MS = 2_000L
+    }
 }
