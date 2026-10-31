@@ -60,6 +60,23 @@ android {
             // `adb reverse tcp:5009 tcp:5009` and build with -PapiBaseUrl=http://127.0.0.1:5009/api/v1/.
             val apiBaseUrl = project.findProperty("apiBaseUrl")?.toString() ?: "http://10.0.2.2:5009/api/v1/"
             buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+
+            // Debug builds never touch mainnet: BSC testnet (97) with the testnet contracts.
+            buildConfigField("String", "RPC_URL", "\"https://data-seed-prebsc-1-s1.bnbchain.org:8545\"")
+            buildConfigField("long", "CHAIN_ID", "97L")
+            buildConfigField("String", "EZPT_TOKEN_CONTRACT", "\"0xCe135658a2E4db9F503B7922E2429c37d9d21DFc\"")
+            buildConfigField("String", "USDT_TOKEN_CONTRACT", "\"0x337610d27c682E347C9cD60BD4b3b107C9d34dDd\"")
+
+            // A separate applicationId lets debug and release coexist on one device. It needs a
+            // matching Firebase app, so it applies only once google-services.json knows the id.
+            val debugId = "com.app.ezipaycoin.debug"
+            val gsFile = file("google-services.json")
+            if (gsFile.exists() && gsFile.readText().contains(debugId)) {
+                applicationIdSuffix = ".debug"
+                versionNameSuffix = "-debug"
+            } else {
+                logger.warn("google-services.json has no client for $debugId; debug keeps the release applicationId. Register the app in Firebase to enable the .debug suffix.")
+            }
         }
 
         // Local sandbox: a debug build wired to the zero-cost sandbox in ezipay-coin-platform
@@ -102,6 +119,15 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+// Guard against shipping the wrong chain: release is mainnet only, debug is never mainnet.
+// (The sandbox build type has its own check where it is defined.)
+afterEvaluate {
+    fun chainOf(name: String): Long? =
+        (android.buildTypes.getByName(name).buildConfigFields["CHAIN_ID"] ?: android.defaultConfig.buildConfigFields["CHAIN_ID"])?.value?.toString()?.removeSuffix("L")?.toLong()
+    check(chainOf("release") == 56L) { "release must use chain 56, found ${chainOf("release")}" }
+    check(chainOf("debug") != 56L) { "debug must not use chain 56" }
 }
 
 dependencies {
