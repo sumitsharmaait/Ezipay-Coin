@@ -25,7 +25,7 @@ class WalletSignIn(private val repository: AuthRepository) {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Result.Failed(messageOrDefault(e.localizedMessage))
+            Result.Failed(messageOrDefault(if (com.app.ezipaycoin.utils.UserMessages.isParseError(e)) com.app.ezipaycoin.utils.UserMessages.UNEXPECTED_RESPONSE else e.localizedMessage))
         }
     }
 

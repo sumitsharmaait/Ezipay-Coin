@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.deposit
 
 import com.app.ezipaycoin.data.remote.api.PaymentsProxy
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
@@ -122,7 +123,7 @@ class DepositViewModel(
                 _uiState.update {
                     it.copy(
                         walletInfoResponse = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }
@@ -162,7 +163,7 @@ class DepositViewModel(
                     _uiState.update {
                         it.copy(
                             statusDepositeResponse = ResponseState.Error(
-                                e.localizedMessage ?: "Unknown error"
+                                UserMessages.of(e, "Unknown error")
                             )
                         )
                     }

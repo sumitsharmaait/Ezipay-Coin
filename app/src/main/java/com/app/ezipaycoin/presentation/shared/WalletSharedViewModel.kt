@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.shared
 
 import androidx.lifecycle.ViewModel
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.domain.repository.HomeRepository
@@ -149,7 +150,7 @@ class WalletSharedViewModel(
                 _uiState.update {
                     if (silent && hasData) it.copy(isRefreshing = false)
                     else it.copy(
-                        responseState = ResponseState.Error(e.localizedMessage ?: "Unknown error"),
+                        responseState = ResponseState.Error(UserMessages.of(e, "Unknown error")),
                         isRefreshing = false
                     )
                 }

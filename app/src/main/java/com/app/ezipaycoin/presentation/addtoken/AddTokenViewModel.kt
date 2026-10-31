@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.addtoken
 
 import androidx.lifecycle.ViewModel
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.request.AddTokenRequest
 import com.app.ezipaycoin.domain.repository.TokenRepository
@@ -90,7 +91,7 @@ class AddTokenViewModel(
                 _uiState.update {
                     it.copy(
                         validateResponse = ResponseState.Error(
-                            e.localizedMessage ?: "Couldn't auto-detect. Enter details manually."
+                            UserMessages.of(e, "Couldn't auto-detect. Enter details manually.")
                         ),
                         autoFilled = false
                     )
@@ -123,7 +124,7 @@ class AddTokenViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(addResponse = ResponseState.Error(e.localizedMessage ?: "Unknown error"))
+                    it.copy(addResponse = ResponseState.Error(UserMessages.of(e, "Unknown error")))
                 }
             }
         }

@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.data.repository
 
 import com.app.ezipaycoin.data.remote.api.ApiService
+import com.app.ezipaycoin.utils.UserMessages
 import com.app.ezipaycoin.data.remote.dto.request.MintAllowlistRequest
 import com.app.ezipaycoin.data.remote.dto.request.MintRequest
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
@@ -71,7 +72,7 @@ class NftRepoImpl(
         } catch (e: IOException) {
             ResponseState.Error("Can't reach the network. Check your connection and try again.")
         } catch (e: Exception) {
-            ResponseState.Error(e.message ?: "Something went wrong.")
+            ResponseState.Error(UserMessages.of(e, "Something went wrong."))
         }
     }
 }

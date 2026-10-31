@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.presentation.dashboard.pay
 
 import androidx.lifecycle.ViewModel
+import com.app.ezipaycoin.utils.UserMessages
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.BitPayRequest
@@ -390,7 +391,7 @@ class PayViewModel(
                 _uiState.update {
                     it.copy(
                         responseState = ResponseState.Error(
-                            e.localizedMessage ?: "Unknown error"
+                            UserMessages.of(e, "Unknown error")
                         )
                     )
                 }
