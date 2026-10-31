@@ -66,4 +66,12 @@ class SocialSignInTest {
         assertFalse(SocialSignInPolicy.showButtons(emptySet()))
         assertTrue(SocialSignInPolicy.showButtons(setOf(Feature.SOCIAL_SIGN_IN)))
     }
+
+    @Test
+    fun `buttons stay hidden without Firebase even when the feature is on`() {
+        assertFalse(SocialSignInPolicy.showButtons(setOf(Feature.SOCIAL_SIGN_IN), firebaseAvailable = false))
+        val developerSet = FeatureResolver.resolve(null, true, emptyMap())
+        assertFalse(SocialSignInPolicy.showButtons(developerSet, firebaseAvailable = false))
+        assertTrue(SocialSignInPolicy.showButtons(setOf(Feature.SOCIAL_SIGN_IN), firebaseAvailable = true))
+    }
 }

@@ -10,13 +10,19 @@ import com.facebook.FacebookSdk
  */
 object FacebookSignIn {
 
+    // FacebookSdk.isFullyInitialized() is restricted to the SDK's own use, so track the start here.
+    @Volatile
+    private var started = false
+
     @Suppress("DEPRECATION")
+    @Synchronized
     fun ensureInitialized(context: Context) {
         val app = context.applicationContext
         if (!FacebookSdk.isInitialized()) FacebookSdk.sdkInitialize(app)
-        if (!FacebookSdk.isFullyInitialized()) {
+        if (!started) {
             FacebookSdk.setAutoInitEnabled(true)
             FacebookSdk.fullyInitialize()
+            started = true
         }
     }
 }

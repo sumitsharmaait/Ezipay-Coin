@@ -69,6 +69,7 @@ import com.facebook.login.LoginResult
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.app.ezipaycoin.config.FeatureFlags
+import com.app.ezipaycoin.config.FirebaseAvailability
 import com.app.ezipaycoin.config.SocialSignInPolicy
 import com.app.ezipaycoin.utils.FacebookSignIn
 import com.google.firebase.auth.FacebookAuthProvider
@@ -97,23 +98,26 @@ fun WalletSetUp(
     }
 
 
-    val auth = FirebaseAuth.getInstance()
+    // FirebaseAuth needs the default FirebaseApp; builds without a Firebase config have none and hide social sign-in.
+    val firebaseAvailable = FirebaseAvailability.isAvailable
+    val auth = remember { if (firebaseAvailable) FirebaseAuth.getInstance() else null }
     val credentialManager = remember { CredentialManager.create(context) }
     val callbackManager = remember { CallbackManager.Factory.create() }
 
 
     val enabledFeatures by FeatureFlags.enabled.collectAsState()
-    val showSocial = SocialSignInPolicy.showButtons(enabledFeatures)
+    val showSocial = SocialSignInPolicy.showButtons(enabledFeatures, firebaseAvailable)
 
     // The Facebook SDK starts on the first tap (see FacebookSignIn), so nothing is registered here.
     fun startFacebookSignIn() {
+        val firebaseAuth = auth ?: return
         FacebookSignIn.ensureInitialized(context)
         val loginManager = LoginManager.getInstance()
         loginManager.registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
             override fun onSuccess(result: LoginResult) {
                 handleFacebookAccessToken(
                     result.accessToken,
-                    auth,
+                    firebaseAuth,
                     onResult = { viewModel.onEvent(it) })
             }
 
@@ -138,6 +142,7 @@ fun WalletSetUp(
     }
 
     fun handleCredentialResponse(response: GetCredentialResponse) {
+        val firebaseAuth = auth ?: return
         val credential = response.credential
         if (credential is CustomCredential &&
             credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
@@ -145,10 +150,10 @@ fun WalletSetUp(
             val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
             val idToken = googleIdTokenCredential.idToken
             val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
-            auth.signInWithCredential(firebaseCredential)
+            firebaseAuth.signInWithCredential(firebaseCredential)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        auth.currentUser?.let {
+                        firebaseAuth.currentUser?.let {
                             viewModel.onEvent(socialEvent(it.displayName, it.email, it.photoUrl?.toString()))
                         }
                     } else {

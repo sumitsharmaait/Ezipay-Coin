@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- UAT builds only: replaces src/main's copy. HTTPS everywhere except the staging server, which
+     UAT uses until it has a server of its own (plain HTTP for now). An HTTPS UAT host needs no
+     entry here; another plain-HTTP host needs its own <domain> line. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">18.142.108.53</domain>
+    </domain-config>
+</network-security-config>
