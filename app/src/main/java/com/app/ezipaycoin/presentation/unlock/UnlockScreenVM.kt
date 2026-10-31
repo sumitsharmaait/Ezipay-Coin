@@ -7,10 +7,13 @@ import com.app.ezipaycoin.data.remote.dto.UserPreferences
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.domain.repository.AuthRepository
+import com.app.ezipaycoin.utils.PasswordCredentials
 import com.app.ezipaycoin.utils.ResponseState
 import com.app.ezipaycoin.utils.SessionManager
 import com.app.ezipaycoin.utils.WalletManager.signNonceWithTrustWalletCore
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +49,15 @@ class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
             }
         }
 
+    }
+
+    /** Clears the typed password and any previous result when the app locks again. */
+    fun reset() {
+        _uiState.update { UnlockState(bioAuthEnabled = it.bioAuthEnabled) }
+        viewModelScope.launch {
+            dataStoreData = dataStore.data.first()
+            _uiState.update { it.copy(bioAuthEnabled = dataStoreData?.bioMetricAuthEnabled == true) }
+        }
     }
 
     fun onEvent(event: UnlockScreenEvent) {
@@ -145,7 +157,6 @@ class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
     private suspend fun fetchFcmToken(): String = suspendCancellableCoroutine { cont ->
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             val token = if (task.isSuccessful) task.result.orEmpty() else ""
-            Log.d("FCM", "Current token: $token")
             if (cont.isActive) cont.resume(token)
         }
     }
@@ -153,11 +164,14 @@ class UnlockScreenVM(private val repository: AuthRepository) : ViewModel() {
     private fun verifyPassword() {
         viewModelScope.launch {
             _uiState.update { it.copy(passwordError = "") }
-            dataStoreData?.password?.let {
-                if (it.contentEquals(_uiState.value.password)) {
-                    postLogin()
-                    return@launch
-                }
+            // Read again: the stored record may have been migrated since this screen was created.
+            val prefs = dataStore.data.first()
+            dataStoreData = prefs
+            val entered = _uiState.value.password
+            val ok = withContext(Dispatchers.Default) { PasswordCredentials.matches(prefs, entered) }
+            if (ok) {
+                postLogin()
+                return@launch
             }
             _uiState.update {
                 it.copy(passwordError = "Incorrect password")

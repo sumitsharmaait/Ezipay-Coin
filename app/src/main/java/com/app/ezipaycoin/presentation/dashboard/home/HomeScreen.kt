@@ -85,6 +85,8 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.app.ezipaycoin.data.remote.dto.QuickAction
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
 import com.app.ezipaycoin.data.remote.dto.response.DashboardResponse
+import com.app.ezipaycoin.config.Feature
+import com.app.ezipaycoin.config.FeatureFlags
 import com.app.ezipaycoin.navigation.Screen
 import com.app.ezipaycoin.presentation.shared.SharedEvent
 import com.app.ezipaycoin.presentation.shared.SharedState
@@ -115,10 +117,8 @@ private object HomeDimens {
 
 private object QuickActionLabels {
     const val ADD_FUNDS = "Add Funds"
-    const val PAY_BILLS = "Pay Bills"
     const val STAKING = "Staking"
     const val DAILY_REWARDS = "Daily Rewards"
-    const val GIFT_CARDS = "Gift Cards"
     const val MORE = "More"
 }
 
@@ -396,15 +396,7 @@ private fun HomeSuccessData(
             .padding(horizontal = HomeDimens.ScreenPadding, vertical = HomeDimens.ScreenPadding)
             .verticalScroll(rememberScrollState())
     ) {
-        if (state.showAnnouncement) {
-            AnnouncementBanner(
-                title = "Stake USDT & Earn 12% APY",
-                description = "Start earning passive rewards instantly with flexible staking.",
-                buttonText = "Start Earning",
-                onClose = { viewModel.onEvent(HomeEvent.DismissAnnouncement) },
-                onClick = { navController.navigate(Screen.BottomNavScreens.Earn) }
-            )
-        }
+        HomeBanners(navController)
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -575,14 +567,17 @@ private fun QuickActionsRow(
     navController: NavController,
     context: Context
 ) {
-    val actions = listOf(
-        QuickAction(QuickActionLabels.ADD_FUNDS, Icons.Filled.AddCircleOutline),
-        QuickAction(QuickActionLabels.PAY_BILLS, Icons.AutoMirrored.Filled.ReceiptLong),
-        QuickAction(QuickActionLabels.STAKING, Icons.Filled.StackedLineChart),
-        QuickAction(QuickActionLabels.DAILY_REWARDS, Icons.Filled.Redeem),
-        QuickAction(QuickActionLabels.GIFT_CARDS, Icons.Filled.CardGiftcard),
-        QuickAction(QuickActionLabels.MORE, Icons.Filled.Apps)
-    )
+    // Pay Bills and Gift Cards had no feature behind them and are gone. Staking shows only
+    // when the server lists pools.
+    val enabled by FeatureFlags.enabled.collectAsState()
+    val actions = buildList {
+        add(QuickAction(QuickActionLabels.ADD_FUNDS, Icons.Filled.AddCircleOutline))
+        if (Feature.STAKING_POOLS in enabled) {
+            add(QuickAction(QuickActionLabels.STAKING, Icons.Filled.StackedLineChart))
+        }
+        add(QuickAction(QuickActionLabels.DAILY_REWARDS, Icons.Filled.Redeem))
+        add(QuickAction(QuickActionLabels.MORE, Icons.Filled.Apps))
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -609,11 +604,8 @@ private fun handleQuickActionClick(
         QuickActionLabels.ADD_FUNDS -> {
             navController.navigateSingleTop(Screen.AppNavScreens.Receive)
         }
-        QuickActionLabels.STAKING, QuickActionLabels.DAILY_REWARDS, QuickActionLabels.GIFT_CARDS -> {
+        QuickActionLabels.STAKING, QuickActionLabels.DAILY_REWARDS -> {
             navController.navigateSingleTop(Screen.BottomNavScreens.Earn)
-        }
-        QuickActionLabels.PAY_BILLS -> {
-            navController.navigateSingleTop(Screen.AppNavScreens.Pay)
         }
         else -> {
             val intent = Intent(Intent.ACTION_VIEW,

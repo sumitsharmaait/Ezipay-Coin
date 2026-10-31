@@ -30,18 +30,38 @@ android {
         buildConfigField("boolean", "SANDBOX", "false")
         buildConfigField("String", "API_BASE_URL", "\"https://api.ezipaycoin.com/api/v1/\"")
         buildConfigField("String", "RPC_URL", "\"https://bsc-dataseed.bnbchain.org\"")
-        buildConfigField("String", "IRIPASH_BASE_URL", "\"https://apiusdt.iripash.com/api/Payment/\"")
+        // "Withdraw (On-chain)" asks the payments vendor for a merchant-funded payout with no debit
+        // of the user's balance, so it stays hidden in every build until the backend debits a
+        // verified balance first.
+        buildConfigField("boolean", "FEATURE_ONCHAIN_WITHDRAW", "false")
         buildConfigField("long", "CHAIN_ID", "56L")
         buildConfigField("String", "EZPT_TOKEN_CONTRACT", "\"0x50387a24253150e808875f3cac8111546623ba64\"")
         buildConfigField("String", "USDT_TOKEN_CONTRACT", "\"0x55d398326f99059fF775485246999027B3197955\"")
     }
 
+    // Release signing comes from gradle properties (~/.gradle/gradle.properties) or the environment:
+    // EZIPAY_RELEASE_STORE_FILE, EZIPAY_RELEASE_STORE_PASSWORD, EZIPAY_RELEASE_KEY_ALIAS,
+    // EZIPAY_RELEASE_KEY_PASSWORD. When any is missing the release build is left unsigned.
+    fun signingValue(name: String): String? =
+        (project.findProperty(name) as String?)?.takeIf { it.isNotBlank() }
+            ?: System.getenv(name)?.takeIf { it.isNotBlank() }
+
+    val releaseStoreFile = signingValue("EZIPAY_RELEASE_STORE_FILE")
+    val releaseStorePassword = signingValue("EZIPAY_RELEASE_STORE_PASSWORD")
+    val releaseKeyAlias = signingValue("EZIPAY_RELEASE_KEY_ALIAS")
+    val releaseKeyPassword = signingValue("EZIPAY_RELEASE_KEY_PASSWORD")
+    val hasReleaseSigning = listOf(
+        releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
+    ).all { it != null }
+
     signingConfigs {
-        create("release") {
-            storeFile = file("../coin_keystore") // path to your keystore
-            storePassword = "EzipayCoin"
-            keyAlias = "key0"
-            keyPassword = "EzipayCoin"
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
@@ -52,7 +72,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
 
         debug {
@@ -102,7 +122,6 @@ android {
                 buildConfigField("boolean", "SANDBOX", "true")
                 buildConfigField("String", "API_BASE_URL", "\"${value("api.baseUrl")}\"")
                 buildConfigField("String", "RPC_URL", "\"${value("rpc.url")}\"")
-                buildConfigField("String", "IRIPASH_BASE_URL", "\"${value("iripash.baseUrl")}\"")
                 buildConfigField("long", "CHAIN_ID", "${chainId}L")
                 buildConfigField("String", "EZPT_TOKEN_CONTRACT", "\"${value("token.ezpt")}\"")
                 buildConfigField("String", "USDT_TOKEN_CONTRACT", "\"${value("token.usdt")}\"")

@@ -1,5 +1,7 @@
 package com.app.ezipaycoin.navigation
 
+import com.app.ezipaycoin.presentation.deleteaccount.DeleteAccountScreen
+import com.app.ezipaycoin.presentation.deleteaccount.DeleteAccountViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -18,8 +20,6 @@ import com.app.ezipaycoin.presentation.dashboard.pay.PayScreen
 import com.app.ezipaycoin.presentation.dashboard.pay.PayViewModel
 import com.app.ezipaycoin.presentation.deposit.Deposit
 import com.app.ezipaycoin.presentation.deposit.DepositViewModel
-import com.app.ezipaycoin.presentation.depositviacard.DepositViaCard
-import com.app.ezipaycoin.presentation.depositviacard.DepositViaCardViewModel
 import com.app.ezipaycoin.presentation.profile.MyProfile
 import com.app.ezipaycoin.presentation.profile.MyProfileViewModel
 import com.app.ezipaycoin.presentation.receive.ReceiveScreen
@@ -59,7 +59,6 @@ fun NavGraphBuilder.appNavGraph(
 ) {
 
     val bitTransactions = ApiClient.retrofitPay.create(ApiService::class.java)
-    val depositWithdrawalApiClient = ApiClient.depositWithdrawalPay.create(ApiService::class.java)
 
 
 
@@ -124,27 +123,13 @@ fun NavGraphBuilder.appNavGraph(
             val token = backStackEntry.toRoute<Screen.AppNavScreens.Deposit>()
             val depositViewModel: DepositViewModel = viewModel(
                 factory = ViewModelFactory {
-                    val repository = DepositWithdrawalRepoImpl(depositWithdrawalApiClient)
+                    val repository = DepositWithdrawalRepoImpl(apiService)
                     DepositViewModel(repository, Json.decodeFromString(token.token))
                 }
             )
             Deposit(
                 navController = navController,
                 viewModel = depositViewModel,
-            )
-        }
-
-        composable<Screen.AppNavScreens.DepositViaCard> { backStackEntry ->
-            val token = backStackEntry.toRoute<Screen.AppNavScreens.DepositViaCard>()
-            val depositViaCardViewModel: DepositViaCardViewModel = viewModel(
-                factory = ViewModelFactory {
-                    val repository = DepositWithdrawalRepoImpl(depositWithdrawalApiClient)
-                    DepositViaCardViewModel(repository, Json.decodeFromString(token.token))
-                }
-            )
-            DepositViaCard(
-                navController = navController,
-                viewModel = depositViaCardViewModel,
             )
         }
 
@@ -158,7 +143,7 @@ fun NavGraphBuilder.appNavGraph(
             val tokenId = navBackStackEntry.toRoute<Screen.AppNavScreens.Withdraw>()
             val withdrawViewModel: WithdrawViewModel = viewModel(
                 factory = ViewModelFactory {
-                    val repository = DepositWithdrawalRepoImpl(depositWithdrawalApiClient)
+                    val repository = DepositWithdrawalRepoImpl(apiService)
                     WithdrawViewModel(repository, tokenId = Json.decodeFromString(tokenId.token))
                 }
             )
@@ -167,6 +152,15 @@ fun NavGraphBuilder.appNavGraph(
 
         composable<Screen.AppNavScreens.WalletDetails> {
             ViewWalletDetails(navController = navController, vm = viewModel<ViewWalletDetailsVM>())
+        }
+
+        composable<Screen.AppNavScreens.DeleteAccount> {
+            val deleteAccountViewModel: DeleteAccountViewModel = viewModel(
+                factory = ViewModelFactory {
+                    DeleteAccountViewModel(AuthRepoImpl(apiService))
+                }
+            )
+            DeleteAccountScreen(viewModel = deleteAccountViewModel)
         }
 
         composable<Screen.AppNavScreens.KycStatus> {

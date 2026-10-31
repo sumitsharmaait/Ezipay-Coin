@@ -47,6 +47,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.app.ezipaycoin.config.Feature
+import com.app.ezipaycoin.config.FeatureFlags
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -232,35 +234,39 @@ fun MyProfile(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            val settings = listOf(
-                SettingItem(
-                    Icons.Filled.WorkspacePremium,
-                    "VIP Privilege",
-                    "Regular"
-                ) { /* TODO */ },
-                SettingItem(
-                    Icons.Filled.PersonOutline,
-                    "Verifications",
-                    "Pending",
-                ) { /* TODO */ },
-                SettingItem(
-                    Icons.Filled.PersonOutline,
-                    "KYC Upload",
-                    "Pending",
-                ) { /* TODO */
-                    Log.d("My Profile", "MyProfile: KYC Upload Item Clicked !!")
-                    navController.navigate(Screen.AppNavScreens.KycUpload)
-                },
-                SettingItem(
-                    Icons.Filled.Shield,
-                    "Security"
-                ) { navController.navigate(Screen.AppNavScreens.WalletDetails) },
-                SettingItem(
-                    Icons.Filled.Close,
-                    "Twitter",
-                    "Pending"
-                ) { /* TODO */ } // Assuming X is Twitter
-            )
+            // Rows without a working destination (VIP, verifications, Twitter) and KYC, whose
+            // backend route is off, are shown only when their feature is enabled.
+            val enabled by FeatureFlags.enabled.collectAsState()
+            val developerMode by FeatureFlags.developerMode.collectAsState()
+            val settings = buildList {
+                if (Feature.PROFILE_PLACEHOLDERS in enabled) {
+                    add(SettingItem(Icons.Filled.WorkspacePremium, "VIP Privilege", "Regular") { })
+                    add(SettingItem(Icons.Filled.PersonOutline, "Verifications", "Pending") { })
+                }
+                if (Feature.KYC in enabled) {
+                    add(SettingItem(Icons.Filled.PersonOutline, "KYC Upload", "Pending") {
+                        navController.navigate(Screen.AppNavScreens.KycUpload)
+                    })
+                }
+                add(SettingItem(Icons.Filled.Shield, "Security") {
+                    navController.navigate(Screen.AppNavScreens.WalletDetails)
+                })
+                add(SettingItem(Icons.Filled.Close, "Delete account") {
+                    navController.navigate(Screen.AppNavScreens.DeleteAccount)
+                })
+                if (Feature.PROFILE_PLACEHOLDERS in enabled) {
+                    add(SettingItem(Icons.Filled.Close, "Twitter", "Pending") { })
+                }
+                if (FeatureFlags.developerModeAvailable) {
+                    add(
+                        SettingItem(
+                            Icons.Filled.Shield,
+                            "Developer: show unfinished features",
+                            if (developerMode) "On" else "Off"
+                        ) { FeatureFlags.setDeveloperMode(!developerMode) }
+                    )
+                }
+            }
 
             Column(
                 modifier = Modifier

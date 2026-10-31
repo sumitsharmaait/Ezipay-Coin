@@ -60,6 +60,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import com.app.ezipaycoin.config.Feature
+import com.app.ezipaycoin.config.FeatureFlags
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -133,14 +135,19 @@ fun PayScreen(
             .fillMaxSize()
         // .verticalScroll(rememberScrollState()) // Scroll handled by LazyColumn in DirectPay
     ) {
-        PaySegmentedControl(
-            selectedTab = state.selectedTab,
-            onTabSelected = { viewModel.onEvent(PayEvent.TabChanged(it)) },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
-        )
+        // Utilities has no backend; without it there is one tab, so no switcher.
+        val utilitiesEnabled = Feature.PAY_UTILITIES in FeatureFlags.enabled.collectAsState().value
+        val activeTab = if (utilitiesEnabled) state.selectedTab else PayScreenTab.DirectPay
+        if (utilitiesEnabled) {
+            PaySegmentedControl(
+                selectedTab = state.selectedTab,
+                onTabSelected = { viewModel.onEvent(PayEvent.TabChanged(it)) },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+            )
+        }
 
         Box(modifier = Modifier.weight(8.7f)) {
-            when (state.selectedTab) {
+            when (activeTab) {
                 PayScreenTab.DirectPay -> DirectPayContent(
                     viewModel,
                     state,

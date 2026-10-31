@@ -16,9 +16,18 @@ object WalletManager {
 
     fun isInitialized(): Boolean = _wallet != null
 
+    /** Photo URL from a social sign-up, held until the wallet is persisted after the seed backup. */
+    var pendingProfilePic: String? = null
+
     /** BSC receive address, or null when the wallet isn't unlocked yet. */
     val address: String?
         get() = _wallet?.getAddressForCoin(CoinType.SMARTCHAIN)
+
+    /** Drops the in-memory wallet and anything held for a sign-up in progress. */
+    fun clear() {
+        _wallet = null
+        pendingProfilePic = null
+    }
 
     fun createNewWallet(): HDWallet {
         val wallet = HDWallet(128, "")

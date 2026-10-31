@@ -3,44 +3,42 @@ package com.app.ezipaycoin.utils
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.security.KeyStore
-import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
-import javax.crypto.spec.IvParameterSpec
 
+/**
+ * Keystore-backed encryption of the wallet blob. The original CBC key ("secret") is kept so existing
+ * data stays readable; new writes use a separate GCM key and the format is described in [EnvelopeCipher].
+ */
 object Crypto {
 
-    private const val KEY_ALIAS = "secret"
-    private const val ALGORITHM = KeyProperties.KEY_ALGORITHM_AES
-    private const val BLOCK_MODE = KeyProperties.BLOCK_MODE_CBC
-    private const val PADDING = KeyProperties.ENCRYPTION_PADDING_PKCS7
-    private const val TRANSFORMATION = "$ALGORITHM/$BLOCK_MODE/$PADDING"
+    private const val LEGACY_ALIAS = "secret"
+    private const val GCM_ALIAS = "secret_gcm_v2"
 
-    private val cipher = Cipher.getInstance(TRANSFORMATION)
     private val keyStore = KeyStore
         .getInstance("AndroidKeyStore")
         .apply {
             load(null)
         }
 
-    private fun getKey(): SecretKey {
-        val existingKey = keyStore
-            .getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
-        return existingKey?.secretKey ?: createKey()
-    }
+    private val envelope = EnvelopeCipher(
+        legacyKey = { keyFor(LEGACY_ALIAS, KeyProperties.BLOCK_MODE_CBC, KeyProperties.ENCRYPTION_PADDING_PKCS7) },
+        gcmKey = { keyFor(GCM_ALIAS, KeyProperties.BLOCK_MODE_GCM, KeyProperties.ENCRYPTION_PADDING_NONE) },
+        cbcTransformation = "AES/CBC/PKCS7Padding"
+    )
 
-    private fun createKey(): SecretKey {
-        return KeyGenerator
-            .getInstance(ALGORITHM)
+    private fun keyFor(alias: String, blockMode: String, padding: String): SecretKey {
+        val existing = keyStore.getEntry(alias, null) as? KeyStore.SecretKeyEntry
+        return existing?.secretKey ?: KeyGenerator
+            .getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
             .apply {
                 init(
                     KeyGenParameterSpec.Builder(
-                        KEY_ALIAS,
-                        KeyProperties.PURPOSE_ENCRYPT or
-                                KeyProperties.PURPOSE_DECRYPT
+                        alias,
+                        KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
                     )
-                        .setBlockModes(BLOCK_MODE)
-                        .setEncryptionPaddings(PADDING)
+                        .setBlockModes(blockMode)
+                        .setEncryptionPaddings(padding)
                         .setRandomizedEncryptionRequired(true)
                         .setUserAuthenticationRequired(false)
                         .build()
@@ -49,18 +47,9 @@ object Crypto {
             .generateKey()
     }
 
-    fun encrypt(bytes: ByteArray): ByteArray {
-        cipher.init(Cipher.ENCRYPT_MODE, getKey())
-        val iv = cipher.iv
-        val encrypted = cipher.doFinal(bytes)
-        return iv + encrypted
-    }
+    @Synchronized
+    fun encrypt(bytes: ByteArray): ByteArray = envelope.encrypt(bytes)
 
-    fun decrypt(bytes: ByteArray): ByteArray {
-        val iv = bytes.copyOfRange(0, cipher.blockSize)
-        val data = bytes.copyOfRange(cipher.blockSize, bytes.size)
-        cipher.init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(iv))
-        return cipher.doFinal(data)
-    }
-
+    @Synchronized
+    fun decrypt(bytes: ByteArray): ByteArray = envelope.decrypt(bytes)
 }

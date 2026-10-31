@@ -38,6 +38,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.app.ezipaycoin.data.remote.dto.response.LearnItemResponse
+import com.app.ezipaycoin.presentation.dashboard.earn.EarnEmpty
+import com.app.ezipaycoin.presentation.dashboard.earn.EarnError
+import com.app.ezipaycoin.presentation.dashboard.earn.EarnLoading
+import com.app.ezipaycoin.presentation.dashboard.earn.Load
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,73 +97,15 @@ fun LearnScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Column(
-            modifier = Modifier
-                .border(
-                    width = 1.dp,
-                    color = greyButtonBackground,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "Getting started with Ezipay Wallet",
-                style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            IconButton(
-                onClick = { /* TODO: Play Video */ },
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                Gradient_4,
-                                Gradient_3,
-                                Gradient_2,
-                                Gradient_1
-                            )
-                        ),
-                        CircleShape
-                    )
-            ) {
-                Icon(
-                    Icons.Filled.PlayArrow,
-                    "Play Video",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Learn how to setup",
-                style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            AppGreyButton(
-                labelColor = TextPrimaryColor,
-                label = "Start Now",
-                onClick = { walletSharedViewModel.onOpenLinkClicked("YouTube Intro") },
-                modifier = Modifier
-                    .fillMaxWidth()
-            )
-        }
-
+        LessonsSection(
+            lessons = state.lessons,
+            onOpen = { url -> walletSharedViewModel.onEvent(SharedEvent.OpenUrl(url)) },
+            onRetry = viewModel::load
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
         LearnTopicsGrid(walletSharedViewModel)
         Spacer(modifier = Modifier.height(24.dp))
-        FeaturedTopicCard(
-            title = "How to stake Ezipay?",
-            subtitle = "Step by Step spacing guide"
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        NewTutorialCard(watchNowClick = {
-            walletSharedViewModel.onOpenLinkClicked("YouTube Full")
-        })
-        Spacer(modifier = Modifier.height(24.dp))
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -265,100 +212,50 @@ fun TopicGridItem(item: LearnGridItem, onItemSelected: (String) -> Unit) {
 }
 
 @Composable
-fun FeaturedTopicCard(title: String, subtitle: String) {
-    Row(
-        modifier = Modifier
-            .background(color = greyButtonBackground, RoundedCornerShape(8.dp))
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Gradient_4,
-                            Gradient_3,
-                            Gradient_2,
-                            Gradient_1
-                        )
-                    ),
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.HelpOutline,
-                contentDescription = title,
-                tint = TextPrimaryColor
-            )
-        }
-        Column(
-            modifier = Modifier.weight(1f),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor),
-                textAlign = TextAlign.Center
-            )
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.titleSmall.copy(color = TextPrimaryColor),
-                textAlign = TextAlign.Center
-            )
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        IconButton(
-            onClick = { /* TODO: Play Video */ },
-            modifier = Modifier
-                .size(36.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Gradient_4,
-                            Gradient_3,
-                            Gradient_2,
-                            Gradient_1
-                        )
-                    ),
-                    CircleShape
-                )
-        ) {
-            Icon(
-                Icons.Outlined.PlayArrow,
-                "Play",
-                tint = TextPrimaryColor
-            )
+private fun LessonsSection(
+    lessons: Load<List<LearnItemResponse>>,
+    onOpen: (String) -> Unit,
+    onRetry: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            "Lessons",
+            style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
+        )
+        when (lessons) {
+            Load.Loading -> EarnLoading()
+            is Load.Failed -> EarnError(lessons.message, onRetry)
+            is Load.Ready ->
+                if (lessons.data.isEmpty()) EarnEmpty("No lessons yet. New guides will show up here.")
+                else lessons.data.forEach { LessonCard(it, onOpen) }
         }
     }
 }
 
 @Composable
-fun NewTutorialCard(watchNowClick: () -> Unit) {
-    Column(
+private fun LessonCard(item: LearnItemResponse, onOpen: (String) -> Unit) {
+    val url = item.resourceUrl?.takeIf { it.startsWith("https://") }
+    Row(
         modifier = Modifier
-            .border(
-                width = 1.dp,
-                color = greyButtonBackground,
-                shape = RoundedCornerShape(8.dp)
-            )
+            .fillMaxWidth()
+            .background(color = greyButtonBackground, RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(enabled = url != null) { url?.let(onOpen) }
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            "New: Ezipay mobile tutorial",
-            style = MaterialTheme.typography.titleLarge.copy(color = TextPrimaryColor)
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        AppGreyButton(
-            labelColor = TextPrimaryColor,
-            label = "Watch Now",
-            onClick = { watchNowClick() },
-            modifier = Modifier
-                .fillMaxWidth(),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                item.title.orEmpty(),
+                style = MaterialTheme.typography.titleMedium.copy(color = TextPrimaryColor)
+            )
+            item.subtitle?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall.copy(color = TextPrimaryColor))
+            }
+        }
+        if (url != null) {
+            Icon(Icons.Filled.PlayArrow, contentDescription = "Open", tint = TextPrimaryColor)
+        }
     }
 }
 

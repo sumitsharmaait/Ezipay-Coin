@@ -1,7 +1,7 @@
 package com.app.ezipaycoin.presentation.importfromseed
 
 import com.app.ezipaycoin.data.remote.dto.response.BaseResponse
-import com.app.ezipaycoin.data.remote.dto.response.NonceResponse
+import com.app.ezipaycoin.data.remote.dto.response.LoginResponse
 import com.app.ezipaycoin.utils.ResponseState
 
 data class ImportFromSeedState(
@@ -15,5 +15,5 @@ data class ImportFromSeedState(
     var newPasswordError: String = "",
     var confirmPasswordError: String = "",
     var bioMetricMessage: String = "",
-    var responseState: ResponseState<BaseResponse<NonceResponse>> = ResponseState.Idle
+    var responseState: ResponseState<BaseResponse<LoginResponse>> = ResponseState.Idle
 )

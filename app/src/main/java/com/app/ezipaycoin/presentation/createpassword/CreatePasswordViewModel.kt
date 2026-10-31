@@ -3,6 +3,9 @@ package com.app.ezipaycoin.presentation.createpassword
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
+import com.app.ezipaycoin.utils.PasswordVerifier
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -90,10 +93,10 @@ class CreatePasswordViewModel : ViewModel() {
 
     private fun updatePassword() {
         viewModelScope.launch {
+            val newPassword = _uiState.value.newPassword
+            val verifier = withContext(Dispatchers.Default) { PasswordVerifier.create(newPassword) }
             dataStore.updateData {
-                it.copy(
-                    password = _uiState.value.newPassword,
-                )
+                it.copy(passwordVerifier = verifier, password = null)
             }
             val data = dataStore.data.first()
             if (data.isWalletCreated) {
