@@ -27,7 +27,7 @@ class FeatureResolverTest {
 
     @Test
     fun `server can turn staking pools on and checkin off`() {
-        val shown = FeatureResolver.resolve(mapOf("staking" to true, "earnCheckin" to false), false)
+        val shown = FeatureResolver.resolve(mapOf("staking" to true, "earnCheckin" to false, "earnTasks" to true), false)
         assertTrue(Feature.STAKING_POOLS in shown)
         assertFalse(Feature.EARN_CHECKIN in shown)
         assertTrue(Feature.EARN_TASKS in shown)
