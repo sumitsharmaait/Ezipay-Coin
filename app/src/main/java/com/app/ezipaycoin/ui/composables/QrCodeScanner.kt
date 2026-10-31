@@ -1,6 +1,27 @@
 package com.app.ezipaycoin.ui.composables
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -28,9 +49,79 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.suspendCancellableCoroutine
 
-@OptIn(ExperimentalGetImage::class)
+/**
+ * QR scanner that asks for the camera when it opens. If the user declines it shows why the
+ * camera is needed, and once the permission is blocked it points to the system settings.
+ */
 @Composable
 fun QrCodeScanner(
+    modifier: Modifier = Modifier,
+    isScanning: Boolean = true,
+    onResult: (String) -> Unit,
+    onDispose: () -> Unit = {},
+) {
+    val context = LocalContext.current
+    var granted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var denied by remember { mutableStateOf(false) }
+    var blocked by remember { mutableStateOf(false) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        granted = ok
+        if (!ok) {
+            denied = true
+            val activity = context.findActivity()
+            // After a refusal, no rationale means the system will not ask again.
+            blocked = activity != null &&
+                !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!granted) launcher.launch(Manifest.permission.CAMERA)
+    }
+
+    if (granted) {
+        QrCodeScannerCamera(modifier, isScanning, onResult, onDispose)
+    } else if (denied) {
+        Column(
+            modifier = modifier.padding(12.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Camera access is needed to scan a QR code.",
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall
+            )
+            TextButton(onClick = {
+                if (blocked) {
+                    context.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                } else {
+                    launcher.launch(Manifest.permission.CAMERA)
+                }
+            }) {
+                Text(if (blocked) "Open settings" else "Allow camera")
+            }
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+@OptIn(ExperimentalGetImage::class)
+@Composable
+private fun QrCodeScannerCamera(
     modifier: Modifier = Modifier,
     isScanning: Boolean = true,
     onResult: (String) -> Unit,
