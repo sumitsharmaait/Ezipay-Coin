@@ -11,6 +11,7 @@ import com.app.ezipaycoin.data.remote.api.ApiClient
 import com.app.ezipaycoin.data.remote.api.ApiService
 import com.app.ezipaycoin.data.remote.liveness.LivenessSocketClient
 import com.app.ezipaycoin.data.repository.AuthRepoImpl
+import com.app.ezipaycoin.data.repository.UserProfileRepoImpl
 import com.app.ezipaycoin.data.repository.DepositWithdrawalRepoImpl
 import com.app.ezipaycoin.data.repository.TransactionRepoImpl
 import com.app.ezipaycoin.presentation.dashboard.pay.PayScreen
@@ -109,7 +110,7 @@ fun NavGraphBuilder.appNavGraph(
                 factory = ViewModelFactory {
                     val apiService = ApiClient.retrofit.create(ApiService::class.java)
                     val repository = AuthRepoImpl(apiService)
-                    MyProfileViewModel(repository)
+                    MyProfileViewModel(repository, UserProfileRepoImpl(apiService))
                 }
             )
             MyProfile(navController = navController, viewModel = myProfileViewModel)

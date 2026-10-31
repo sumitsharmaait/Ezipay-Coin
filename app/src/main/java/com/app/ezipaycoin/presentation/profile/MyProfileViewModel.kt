@@ -7,6 +7,7 @@ import com.app.ezipaycoin.data.remote.dto.UserPreferences
 import com.app.ezipaycoin.data.remote.dto.UserPreferencesRepository
 import com.app.ezipaycoin.data.remote.dto.request.UpdateProfileRequest
 import com.app.ezipaycoin.domain.repository.AuthRepository
+import com.app.ezipaycoin.domain.repository.UserProfileRepository
 import com.app.ezipaycoin.utils.ResponseState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,10 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 
-class MyProfileViewModel(private val repository: AuthRepository) : ViewModel() {
+class MyProfileViewModel(
+    private val repository: AuthRepository,
+    private val profileRepository: UserProfileRepository? = null
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MyProfileState())
     val uiState: StateFlow<MyProfileState> = _uiState.asStateFlow()
@@ -37,6 +41,35 @@ class MyProfileViewModel(private val repository: AuthRepository) : ViewModel() {
                     name = data?.userName ?: state.name
                 )
             }
+            loadProfile()
+        }
+    }
+
+    /** Loads the profile from the server and caches it; the cached values stay on screen if that fails. */
+    private suspend fun loadProfile() {
+        val repo = profileRepository ?: return
+        try {
+            val res = repo.getMe()
+            if (!res.apiStatus) return
+            val cached = prefs?.data?.first()
+            val merged = ProfileMerge.merge(
+                ProfileFields(cached?.userName, cached?.userEmail, cached?.userProfile),
+                res.apiData
+            )
+            prefs?.updateData {
+                it.copy(userName = merged.name, userEmail = merged.email, userProfile = merged.profile)
+            }
+            _uiState.update {
+                it.copy(
+                    name = merged.name ?: it.name,
+                    email = merged.email ?: it.email,
+                    profile = merged.profile ?: it.profile
+                )
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Offline or server error: keep showing the cached profile.
         }
     }
 
