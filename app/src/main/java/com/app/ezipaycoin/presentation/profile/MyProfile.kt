@@ -251,6 +251,9 @@ fun MyProfile(
                 add(SettingItem(Icons.Filled.Shield, "Security") {
                     navController.navigate(Screen.AppNavScreens.WalletDetails)
                 })
+                add(SettingItem(Icons.Filled.Close, "Delete account") {
+                    navController.navigate(Screen.AppNavScreens.DeleteAccount)
+                })
                 if (Feature.PROFILE_PLACEHOLDERS in enabled) {
                     add(SettingItem(Icons.Filled.Close, "Twitter", "Pending") { })
                 }

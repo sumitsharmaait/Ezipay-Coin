@@ -1,6 +1,7 @@
 package com.app.ezipaycoin.data.remote.api
 
 import com.app.ezipaycoin.data.remote.dto.request.BitPayRequest
+import com.app.ezipaycoin.data.remote.dto.request.DeleteAccountRequest
 import com.app.ezipaycoin.data.remote.dto.request.EstimateGasRequest
 import com.app.ezipaycoin.data.remote.dto.request.LoginRequest
 import com.app.ezipaycoin.data.remote.dto.request.NetworkInfoByTokenRequest
@@ -54,6 +55,13 @@ interface ApiService {
 
     @POST("Auth/login")
     suspend fun postLogin(@Body request: LoginRequest): BaseResponse<LoginResponse>
+
+    /** Deletes the account server-side. The body must be {"confirm":"DELETE"}. */
+    @retrofit2.http.HTTP(method = "DELETE", path = "Users/me", hasBody = true)
+    suspend fun deleteAccount(
+        @retrofit2.http.Header("Idempotency-Key") idempotencyKey: String,
+        @Body request: DeleteAccountRequest
+    ): BaseResponse<String?>
 
     @GET("Auth/logout")
     suspend fun logout(): BaseResponse<String>

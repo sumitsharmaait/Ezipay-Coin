@@ -1,5 +1,6 @@
 package com.app.ezipaycoin.presentation.seedphraseview
 
+import com.app.ezipaycoin.utils.SecureScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +64,7 @@ fun WriteDownSeedPhraseScreen(
     viewModel: ViewSeedPhraseViewModel
 ) {
 
+    SecureScreen()
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(

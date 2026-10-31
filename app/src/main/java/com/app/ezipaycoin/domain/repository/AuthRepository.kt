@@ -17,6 +17,8 @@ interface AuthRepository {
 
     suspend fun logout() : BaseResponse<String>
 
+    suspend fun deleteAccount(idempotencyKey: String): BaseResponse<String?>
+
     suspend fun updateImage(file: MultipartBody.Part) : BaseResponse<String>
 
 }
