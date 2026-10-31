@@ -90,16 +90,11 @@ class WalletSharedViewModel(
                 val res = homeRepository.getDashboard()
                 if (res.apiStatus) {
                     val selected = _uiState.value.selectedCrypto
-                    val crypto = if (selected != null) {
-                        res.apiData.crypto.firstOrNull {
-                            it.symbol.equals(
-                                selected.symbol,
-                                ignoreCase = true
-                            )
-                        }
-                    } else {
-                        res.apiData.crypto.firstOrNull()
-                    }
+                    // Keep the user's coin when it is still listed, otherwise fall back to the first one
+                    // (EZPT) so the balance card never ends up empty after a refresh.
+                    val crypto = selected?.let { sel ->
+                        res.apiData.crypto.firstOrNull { it.symbol.equals(sel.symbol, ignoreCase = true) }
+                    } ?: res.apiData.crypto.firstOrNull()
                     _uiState.update {
                         it.copy(
                             responseState = ResponseState.Success(res),

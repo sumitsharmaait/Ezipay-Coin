@@ -55,8 +55,11 @@ android {
         }
 
         debug {
-            // Local override kept from this checkout's ApiClient: a platform API on the host.
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:5009/api/v1/\"")
+            // The .NET API running on this machine (port 5009; 5000 is taken by the macOS AirPlay receiver).
+            // 10.0.2.2 is how the Android emulator reaches the host. For a USB device run
+            // `adb reverse tcp:5009 tcp:5009` and build with -PapiBaseUrl=http://127.0.0.1:5009/api/v1/.
+            val apiBaseUrl = project.findProperty("apiBaseUrl")?.toString() ?: "http://10.0.2.2:5009/api/v1/"
+            buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
         }
 
         // Local sandbox: a debug build wired to the zero-cost sandbox in ezipay-coin-platform
